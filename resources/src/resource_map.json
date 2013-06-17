@@ -1,0 +1,111 @@
+{
+    "media": [
+        {
+            "defName": "IMAGE_TOP_EXACT",
+            "type": "png",
+            "file": "images/top_exact.png"
+        },
+        {
+            "defName": "IMAGE_MENU_ICON",
+            "type": "png",
+            "file": "images/menu_icon_convok_watch.png"
+        },
+        {
+            "defName": "IMAGE_TOP_BEFORE",
+            "type": "png",
+            "file": "images/top_before.png"
+        },
+        {
+            "defName": "IMAGE_TOP_ALMOST",
+            "type": "png",
+            "file": "images/top_almost.png"
+        },
+        {
+            "defName": "IMAGE_TOP_AFTER",
+            "type": "png",
+            "file": "images/top_after.png"
+        },
+        {
+            "defName": "IMAGE_MID_12",
+            "type": "png",
+            "file": "images/mid_12.png"
+        },
+        {
+            "defName": "IMAGE_MID_11",
+            "type": "png",
+            "file": "images/mid_11.png"
+        },
+        {
+            "defName": "IMAGE_MID_10",
+            "type": "png",
+            "file": "images/mid_10.png"
+        },
+        {
+            "defName": "IMAGE_MID_09",
+            "type": "png",
+            "file": "images/mid_9.png"
+        },
+        {
+            "defName": "IMAGE_MID_08",
+            "type": "png",
+            "file": "images/mid_8.png"
+        },
+        {
+            "defName": "IMAGE_MID_07",
+            "type": "png",
+            "file": "images/mid_7.png"
+        },
+        {
+            "defName": "IMAGE_MID_06",
+            "type": "png",
+            "file": "images/mid_6.png"
+        },
+        {
+            "defName": "IMAGE_MID_05",
+            "type": "png",
+            "file": "images/mid_5.png"
+        },
+        {
+            "defName": "IMAGE_MID_04",
+            "type": "png",
+            "file": "images/mid_4.png"
+        },
+        {
+            "defName": "IMAGE_MID_03",
+            "type": "png",
+            "file": "images/mid_3.png"
+        },
+        {
+            "defName": "IMAGE_BOT_45",
+            "type": "png",
+            "file": "images/bot_45.png"
+        },
+        {
+            "defName": "IMAGE_BOT_30",
+            "type": "png",
+            "file": "images/bot_30.png"
+        },
+        {
+            "defName": "IMAGE_BOT_15",
+            "type": "png",
+            "file": "images/bot_15.png"
+        },
+        {
+            "defName": "IMAGE_BOT_00",
+            "type": "png",
+            "file": "images/bot_00.png"
+        },
+        {
+            "defName": "IMAGE_MID_01",
+            "type": "png",
+            "file": "images/mid_1.png"
+        },
+        {
+            "defName": "IMAGE_MID_02",
+            "type": "png",
+            "file": "images/mid_2.png"
+        }
+    ],
+    "friendlyVersion": "VERSION",
+    "versionDefName": "APP_RESOURCES"
+}
