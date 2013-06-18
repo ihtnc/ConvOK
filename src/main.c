@@ -6,16 +6,40 @@
 #define MY_UUID { 0x58, 0x99, 0xC3, 0xF9, 0x3E, 0x66, 0x4B, 0xC9, 0xA0, 0x86, 0xA7, 0xD3, 0x97, 0xE4, 0xDB, 0xFD }
 
 PBL_APP_INFO(MY_UUID,
-             "Conversation with Orange Kid v2", "ihopethisnamecounts",
-             1, 0, /* App version */
+             #ifndef DEBUG
+               "Conversation with Orange Kid v2",
+             #else
+               "ConvOKv2-debug",
+             #endif
+             "ihopethisnamecounts",
+             1, 1, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
-BmpContainer image_containers[SLOTS_COUNT];
+Window window;
 
-// The state is either "empty" or the image currently in the slot.
-// This is to prevent the slot from unnecessarily reloading the image.
+BmpContainer image_containers[SLOTS_COUNT];
+BmpContainer previmage_containers[SLOTS_COUNT];
+
+GRect slot_rectangles[SLOTS_COUNT];
+GRect slot_out_rectangles[SLOTS_COUNT];
+GRect slot_in_rectangles[SLOTS_COUNT];
+
+PropertyAnimation slot_out_animations[SLOTS_COUNT];
+PropertyAnimation slot_in_animations[SLOTS_COUNT];
+
+const int SLOT_OUT_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_OUT_DURATION, SLOT_MID_OUT_DURATION, SLOT_BOT_OUT_DURATION};
+const int SLOT_OUT_ANIMATION_DELAYS[SLOTS_COUNT] = {SLOT_TOP_OUT_DELAY, SLOT_MID_OUT_DELAY, SLOT_BOT_OUT_DELAY};
+
+const int SLOT_IN_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_IN_DURATION, SLOT_MID_IN_DURATION, SLOT_BOT_IN_DURATION};
+const int SLOT_IN_ANIMATION_DELAYS[SLOTS_COUNT] = {SLOT_TOP_IN_DELAY, SLOT_MID_IN_DELAY, SLOT_BOT_IN_DELAY};
+
+const int SLOT_YOFFSETS[SLOTS_COUNT] = {SLOT_TOP_YOFFSET, SLOT_MID_YOFFSET, SLOT_BOT_YOFFSET};
+
+//The state is either "empty" or the image currently in the slot.
+//This is to prevent the slot from unnecessarily reloading the image.
 int image_slot_state[SLOTS_COUNT] = {SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY};
+int previmage_slot_state[SLOTS_COUNT] = {SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY};
 
 const int IMAGE_RESOURCE_TOP_IDS[4] = 
 {
@@ -41,8 +65,6 @@ const int IMAGE_RESOURCE_BOT_IDS[4] =
   RESOURCE_ID_IMAGE_BOT_30, RESOURCE_ID_IMAGE_BOT_45
 };
 
-Window window;
-
 void load_image_to_slot(int slot_number, int hour_value, int minute_value) 
 {
   //Loads the digit image from the application's resources and displays it on-screen in the correct location.
@@ -59,10 +81,9 @@ void load_image_to_slot(int slot_number, int hour_value, int minute_value)
   
   //TODO: Signal these error(s)?
   if (slot_number < 0 || slot_number > SLOTS_COUNT) { return; }
-  if (hour_value < 1 || hour_value > 12) { return; }
+  if (hour_value < 0 || hour_value > 11) { return; }
   if (minute_value < 0 || minute_value > 59) { return; }
   
-  int slot_y = 0;
   int slot_value = -1;
   int quarter_value = minute_value / 15;
   int quarter_remainder = minute_value % 15;
@@ -85,8 +106,6 @@ void load_image_to_slot(int slot_number, int hour_value, int minute_value)
 	{
       slot_value = 3;
     }
-    
-    slot_y = SLOT_TOP_YOFFSET;
   }
   else if (slot_number == SLOT_MID)
   {
@@ -95,7 +114,6 @@ void load_image_to_slot(int slot_number, int hour_value, int minute_value)
 	  
 	//Normalize value (should only be 0-11)
 	slot_value = slot_value % 12;
-	slot_y = SLOT_MID_YOFFSET;  
   }
   else if (slot_number == SLOT_BOT) 
   {
@@ -104,23 +122,36 @@ void load_image_to_slot(int slot_number, int hour_value, int minute_value)
     
     //Normalize value (should only be 0-3)
 	slot_value = slot_value % 4; 
-    slot_y = SLOT_BOT_YOFFSET;
   }
   
   //Do not reload the image if slot_state value did not change
   if (image_slot_state[slot_number] == slot_value) { return; }
   
-  int resourceid = determine_image_from_value(slot_number, slot_value);
-  
+  int prevslot_state = image_slot_state[slot_number];
   unload_image_from_slot(slot_number);
+  
+  int resourceid = determine_image_from_value(slot_number, slot_value);
   bmp_init_container(resourceid, &image_containers[slot_number]);
-  
-  image_containers[slot_number].layer.layer.frame.origin.x = SLOT_XOFFSET;
-  image_containers[slot_number].layer.layer.frame.origin.y = slot_y;
-  
+  image_containers[slot_number].layer.layer.frame.origin.x = SLOT_XOFFSET + SCREEN_WIDTH;
+  image_containers[slot_number].layer.layer.frame.origin.y = SLOT_YOFFSETS[slot_number];
   layer_add_child(&window.layer, &image_containers[slot_number].layer.layer);
   
-  image_slot_state[slot_number] = slot_value;
+  image_slot_state[slot_number] = slot_value;  
+	
+  bool has_out_animation = false;
+  if(prevslot_state != SLOT_STATUS_EMPTY)
+  {
+    int prevresourceid = determine_image_from_value(slot_number, prevslot_state);
+      
+    bmp_init_container(prevresourceid, &previmage_containers[slot_number]);
+    previmage_containers[slot_number].layer.layer.frame.origin.x = SLOT_XOFFSET;
+    previmage_containers[slot_number].layer.layer.frame.origin.y =  SLOT_YOFFSETS[slot_number];
+    layer_add_child(&window.layer, &previmage_containers[slot_number].layer.layer);
+      
+    has_out_animation = true;
+  }
+  
+  animate_slot(slot_number, has_out_animation);
 }
 
 int determine_image_from_value(int slot_number, int slot_value)
@@ -150,20 +181,78 @@ void unload_image_from_slot(int slot_number)
 
   if (image_slot_state[slot_number] != SLOT_STATUS_EMPTY) 
   {
-	layer_remove_from_parent(&image_containers[slot_number].layer.layer);
+	layer_remove_from_parent(&previmage_containers[slot_number].layer.layer);
+    layer_remove_from_parent(&image_containers[slot_number].layer.layer);
+    
+    bmp_deinit_container(&previmage_containers[slot_number]);
     bmp_deinit_container(&image_containers[slot_number]);
+
     image_slot_state[slot_number] = SLOT_STATUS_EMPTY;
   }
 }
 
 void display_time(PblTm *tick_time) 
 {
-  int normalized_hour = tick_time->tm_hour % 12;
-  int normalized_minute = tick_time->tm_min;
+  #ifndef DEBUG
+    int normalized_hour = tick_time->tm_hour % 12;
+    int normalized_minute = tick_time->tm_min;
+  #else
+    int normalized_hour = tick_time->tm_min % 12;
+    int normalized_minute = tick_time->tm_sec;
+  #endif
   
   load_image_to_slot(SLOT_TOP, normalized_hour, normalized_minute);
   load_image_to_slot(SLOT_MID, normalized_hour, normalized_minute);
   load_image_to_slot(SLOT_BOT, normalized_hour, normalized_minute);
+}
+
+void slot_out_animation_stopped(Animation *animation, void *data)
+{
+  (void)animation;
+  (void)data;
+}
+
+void slot_in_animation_stopped(Animation *animation, void *data)
+{
+  (void)animation;
+  Layer *current = (Layer *)data;
+	
+  current->frame.origin.x = SLOT_XOFFSET;
+}
+
+void animate_slot(int slot_number, bool out_animation)
+{
+  if(image_slot_state[slot_number] == SLOT_STATUS_EMPTY) { return; }
+
+  property_animation_init_layer_frame(&slot_out_animations[slot_number], 
+                                      &previmage_containers[slot_number].layer.layer,
+                                      &slot_rectangles[slot_number], &slot_out_rectangles[slot_number]);
+    
+  animation_set_duration(&slot_out_animations[slot_number].animation, SLOT_OUT_ANIMATION_DURATIONS[slot_number]);
+  animation_set_curve(&slot_out_animations[slot_number].animation, AnimationCurveEaseIn);
+  animation_set_handlers(&slot_out_animations[slot_number].animation,
+                         (AnimationHandlers)
+                         {
+                           .stopped = (AnimationStoppedHandler)slot_out_animation_stopped
+                         }, 
+                         (void *)(&previmage_containers[slot_number].layer.layer));
+  animation_set_delay(&slot_out_animations[slot_number].animation, SLOT_OUT_ANIMATION_DELAYS[slot_number]);
+  animation_schedule(&slot_out_animations[slot_number].animation);
+  
+  property_animation_init_layer_frame(&slot_in_animations[slot_number], 
+                                      &image_containers[slot_number].layer.layer,
+                                      &slot_in_rectangles[slot_number], &slot_rectangles[slot_number]);
+  
+  animation_set_duration(&slot_in_animations[slot_number].animation, SLOT_IN_ANIMATION_DURATIONS[slot_number]);
+  animation_set_curve(&slot_in_animations[slot_number].animation, AnimationCurveEaseOut);
+  animation_set_handlers(&slot_in_animations[slot_number].animation,
+                         (AnimationHandlers)
+                         {
+                           .stopped = (AnimationStoppedHandler)slot_in_animation_stopped
+                         }, 
+                         (void *)(&image_containers[slot_number].layer.layer));
+  animation_set_delay(&slot_in_animations[slot_number].animation, SLOT_IN_ANIMATION_DELAYS[slot_number]);
+  animation_schedule(&slot_in_animations[slot_number].animation);
 }
 
 void handle_init(AppContextRef ctx)
@@ -175,7 +264,19 @@ void handle_init(AppContextRef ctx)
   window_set_background_color(&window, GColorBlack);
 
   resource_init_current_app(&APP_RESOURCES);
-	
+  
+  slot_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
+  slot_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
+  slot_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
+  
+  slot_in_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET + SCREEN_WIDTH, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
+  slot_in_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET + SCREEN_WIDTH, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
+  slot_in_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET + SCREEN_WIDTH, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
+
+  slot_out_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
+  slot_out_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
+  slot_out_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
+  
   // Avoids a blank screen on watch start.
   PblTm tick_time;
   get_time(&tick_time); 
@@ -208,7 +309,12 @@ void pbl_main(void *params)
 	.tick_info = 
 	{
       .tick_handler = &handle_minute_tick,    
-      .tick_units = MINUTE_UNIT
+      
+      #ifndef DEBUG
+        .tick_units = MINUTE_UNIT
+      #else
+        .tick_units = SECOND_UNIT
+      #endif
     }
   };
     
