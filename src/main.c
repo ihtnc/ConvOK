@@ -12,7 +12,7 @@ PBL_APP_INFO(MY_UUID,
                "ConvOKv2-debug",
              #endif
              "ihopethisnamecounts",
-             1, 2, /* App version */
+             1, 3, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
@@ -39,24 +39,31 @@ PBL_APP_INFO(MY_UUID,
 */
 
 Window window;
+bool show_splash;
 
 //These 2 image containers are needed for animation (1 for the current image and 1 for the previous image).
 BmpContainer image_containers[SLOTS_COUNT];
 BmpContainer previmage_containers[SLOTS_COUNT];
 
-GRect slot_rectangles[SLOTS_COUNT];     //Current frame
-GRect slot_out_rectangles[SLOTS_COUNT]; //Target frame of the scroll out animation
-GRect slot_in_rectangles[SLOTS_COUNT];  //Source frame of the scroll in animation
+BmpContainer splash_containers[SLOTS_COUNT]; //Image containers for the splash screen
+
+GRect slot_rectangles[SLOTS_COUNT];        //Current frame
+GRect slot_out_rectangles[SLOTS_COUNT];    //Target frame of the scroll out animation
+GRect slot_in_rectangles[SLOTS_COUNT];     //Source frame of the scroll in animation
+GRect slot_splash_rectangles[SLOTS_COUNT]; //Source frame of the splash animation
 
 //These 2 are used to animate the images (the current image is used on the in animation and the previous image is used in the out animation)
 PropertyAnimation slot_out_animations[SLOTS_COUNT];
 PropertyAnimation slot_in_animations[SLOTS_COUNT];
+
+PropertyAnimation slot_splash_animations[SLOTS_COUNT]; //Used to animate the splash screen
 
 //Animation timings
 const int SLOT_OUT_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_OUT_DURATION, SLOT_MID_OUT_DURATION, SLOT_BOT_OUT_DURATION};
 const int SLOT_OUT_ANIMATION_DELAYS[SLOTS_COUNT] = {SLOT_TOP_OUT_DELAY, SLOT_MID_OUT_DELAY, SLOT_BOT_OUT_DELAY};
 const int SLOT_IN_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_IN_DURATION, SLOT_MID_IN_DURATION, SLOT_BOT_IN_DURATION};
 const int SLOT_IN_ANIMATION_DELAYS[SLOTS_COUNT] = {SLOT_TOP_IN_DELAY, SLOT_MID_IN_DELAY, SLOT_BOT_IN_DELAY};
+const int SLOT_SPLASH_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_SPLASH_DURATION, SLOT_MID_SPLASH_DURATION, SLOT_BOT_SPLASH_DURATION};
 
 //Position of the slots along the Y-axis
 const int SLOT_YOFFSETS[SLOTS_COUNT] = {SLOT_TOP_YOFFSET, SLOT_MID_YOFFSET, SLOT_BOT_YOFFSET};
@@ -158,39 +165,35 @@ void load_image_to_slot(int slot_number, int hour_value, int minute_value)
   image_containers[slot_number].layer.layer.frame.origin.y = SLOT_YOFFSETS[slot_number];
   layer_add_child(&window.layer, &image_containers[slot_number].layer.layer);
   
-  image_slot_state[slot_number] = slot_value;  
+  //Load the image based on the previous state
+  int prevresourceid = determine_image_from_value(slot_number, prevslot_state);
+  bmp_init_container(prevresourceid, &previmage_containers[slot_number]);
+  previmage_containers[slot_number].layer.layer.frame.origin.x = SLOT_XOFFSET;
+  previmage_containers[slot_number].layer.layer.frame.origin.y =  SLOT_YOFFSETS[slot_number];
+  layer_add_child(&window.layer, &previmage_containers[slot_number].layer.layer);
   
-  //Run the out animation only if there is a previous image.
-  //This is applicable when the watchface runs the first time.
-  bool has_out_animation = false;
-  if(prevslot_state != SLOT_STATUS_EMPTY)
-  {
-    //Load the image based on the previous state
-    int prevresourceid = determine_image_from_value(slot_number, prevslot_state);
-    bmp_init_container(prevresourceid, &previmage_containers[slot_number]);
-    previmage_containers[slot_number].layer.layer.frame.origin.x = SLOT_XOFFSET;
-    previmage_containers[slot_number].layer.layer.frame.origin.y =  SLOT_YOFFSETS[slot_number];
-    layer_add_child(&window.layer, &previmage_containers[slot_number].layer.layer);
-      
-    has_out_animation = true;
-  }
-  
-  animate_slot(slot_number, has_out_animation);
+  image_slot_state[slot_number] = slot_value;
+  animate_slot(slot_number);
 }
 
 int determine_image_from_value(int slot_number, int slot_value)
 {
+  //If the value is invalid, just show the splash image
+  //This is applicable only when the watchface initially loads
   if (slot_number == SLOT_TOP)
   {
-    return IMAGE_RESOURCE_TOP_IDS[slot_value];
+    if(slot_value != SLOT_SPLASH && slot_value != SLOT_STATUS_EMPTY) { return IMAGE_RESOURCE_TOP_IDS[slot_value]; }
+    else { return RESOURCE_ID_IMAGE_TOP_SPLASH; }
   }
   else if (slot_number == SLOT_MID)
   {
-	return IMAGE_RESOURCE_MID_IDS[slot_value];
+    if(slot_value != SLOT_SPLASH && slot_value != SLOT_STATUS_EMPTY) { return IMAGE_RESOURCE_MID_IDS[slot_value]; }
+    else { return RESOURCE_ID_IMAGE_MID_SPLASH; }
   }
   else if (slot_number == SLOT_BOT) 
   {
-    return IMAGE_RESOURCE_BOT_IDS[slot_value];
+    if(slot_value != SLOT_SPLASH && slot_value != SLOT_STATUS_EMPTY) { return IMAGE_RESOURCE_BOT_IDS[slot_value]; }
+    else { return RESOURCE_ID_IMAGE_BOT_SPLASH; }
   }
   else 
   {
@@ -203,20 +206,26 @@ void unload_image_from_slot(int slot_number)
   //Removes the images from the display and unloads the resource to free up RAM.
   //Can handle being called on an already empty slot.
 
-  if (image_slot_state[slot_number] != SLOT_STATUS_EMPTY) 
+  if (image_slot_state[slot_number] != SLOT_STATUS_EMPTY && image_slot_state[slot_number] != SLOT_SPLASH) 
   {
 	layer_remove_from_parent(&previmage_containers[slot_number].layer.layer);
     layer_remove_from_parent(&image_containers[slot_number].layer.layer);
-    
     bmp_deinit_container(&previmage_containers[slot_number]);
     bmp_deinit_container(&image_containers[slot_number]);
 
     image_slot_state[slot_number] = SLOT_STATUS_EMPTY;
   }
+  else if (image_slot_state[slot_number] != SLOT_STATUS_EMPTY && image_slot_state[slot_number] == SLOT_SPLASH) 
+  {
+	layer_remove_from_parent(&splash_containers[slot_number].layer.layer);
+    bmp_deinit_container(&splash_containers[slot_number]);
+  }
 }
 
 void display_time(PblTm *tick_time) 
 {
+  if(show_splash == true) { return; }
+	  
   #ifndef DEBUG
     int normalized_hour = tick_time->tm_hour % 12;
     int normalized_minute = tick_time->tm_min;
@@ -242,7 +251,7 @@ void slot_in_animation_stopped(Animation *animation, void *data)
   (void)data;
 }
 
-void animate_slot(int slot_number, bool out_animation)
+void animate_slot(int slot_number)
 {
   //Do not run the animation if there are no images.
   if(image_slot_state[slot_number] == SLOT_STATUS_EMPTY) { return; }
@@ -278,6 +287,67 @@ void animate_slot(int slot_number, bool out_animation)
   animation_schedule(&slot_in_animations[slot_number].animation);
 }
 
+void load_splash_screen() 
+{
+  show_splash = true;
+
+  bmp_init_container(RESOURCE_ID_IMAGE_TOP_SPLASH, &splash_containers[SLOT_TOP]);
+  bmp_init_container(RESOURCE_ID_IMAGE_MID_SPLASH, &splash_containers[SLOT_MID]);
+  bmp_init_container(RESOURCE_ID_IMAGE_BOT_SPLASH, &splash_containers[SLOT_BOT]);
+  
+  splash_containers[SLOT_TOP].layer.layer.frame.origin.x = SLOT_XOFFSET;
+  splash_containers[SLOT_TOP].layer.layer.frame.origin.y = SLOT_YOFFSETS[SLOT_TOP];
+  layer_add_child(&window.layer, &splash_containers[SLOT_TOP].layer.layer);
+
+  splash_containers[SLOT_MID].layer.layer.frame.origin.x = SLOT_XOFFSET;
+  splash_containers[SLOT_MID].layer.layer.frame.origin.y = SLOT_YOFFSETS[SLOT_MID];
+  layer_add_child(&window.layer, &splash_containers[SLOT_MID].layer.layer);
+  
+  splash_containers[SLOT_BOT].layer.layer.frame.origin.x = SLOT_XOFFSET;
+  splash_containers[SLOT_BOT].layer.layer.frame.origin.y = SLOT_YOFFSETS[SLOT_BOT];
+  layer_add_child(&window.layer, &splash_containers[SLOT_BOT].layer.layer);
+
+  image_slot_state[SLOT_TOP] = SLOT_SPLASH;
+  image_slot_state[SLOT_MID] = SLOT_SPLASH;
+  image_slot_state[SLOT_BOT] = SLOT_SPLASH;
+  
+  animate_splash(SLOT_TOP);
+  animate_splash(SLOT_MID);
+  animate_splash(SLOT_BOT);
+}
+
+void slot_splash_animation_stopped(Animation *animation, void *data)
+{
+  (void)animation;
+  (void)data;
+	
+  show_splash = false;
+	
+  PblTm tick_time;
+  get_time(&tick_time); 
+  display_time(&tick_time);
+}
+
+void animate_splash(int slot_number)
+{
+  if(show_splash == false) { return; }
+  if(image_slot_state[slot_number] != SLOT_SPLASH) { return; }
+  
+  property_animation_init_layer_frame(&slot_splash_animations[slot_number], 
+                                      &splash_containers[slot_number].layer.layer,
+                                      &slot_splash_rectangles[slot_number], &slot_rectangles[slot_number]);
+    
+  animation_set_duration(&slot_splash_animations[slot_number].animation, SLOT_SPLASH_ANIMATION_DURATIONS[slot_number]);
+  animation_set_curve(&slot_splash_animations[slot_number].animation, AnimationCurveEaseInOut);
+  animation_set_handlers(&slot_splash_animations[slot_number].animation,
+                         (AnimationHandlers)
+                         {
+                           .stopped = (AnimationStoppedHandler)slot_splash_animation_stopped
+                         }, 
+                         NULL);
+  animation_schedule(&slot_splash_animations[slot_number].animation);
+}
+
 void handle_init(AppContextRef ctx)
 {
   (void)ctx;
@@ -300,10 +370,12 @@ void handle_init(AppContextRef ctx)
   slot_out_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
   slot_out_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
   
+  slot_splash_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET + SLOT_TOP_SPLASH_XOFFSET, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
+  slot_splash_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET - SLOT_MID_SPLASH_XOFFSET, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
+  slot_splash_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET + SLOT_BOT_SPLASH_XOFFSET, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
+  
   // Avoids a blank screen on watch start.
-  PblTm tick_time;
-  get_time(&tick_time); 
-  display_time(&tick_time);
+  load_splash_screen();
 }
 
 void handle_deinit(AppContextRef ctx) 

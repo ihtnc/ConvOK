@@ -7,7 +7,8 @@
 
 #define SLOTS_COUNT 3
 #define SLOT_STATUS_EMPTY -1
-
+#define SLOT_SPLASH -2
+	
 #define SLOT_TOP 0
 #define SLOT_MID 1
 #define SLOT_BOT  2
@@ -16,6 +17,10 @@
 #define SLOT_TOP_YOFFSET 0
 #define SLOT_MID_YOFFSET 30
 #define SLOT_BOT_YOFFSET 104
+
+#define SLOT_TOP_SPLASH_XOFFSET 10
+#define SLOT_MID_SPLASH_XOFFSET 20
+#define SLOT_BOT_SPLASH_XOFFSET 0
 
 //Duration and delay are in ms
 //Note: In debug mode, be aware that every 15 seconds, the top slot will change again after just 1000ms.
@@ -37,6 +42,10 @@
 #define SLOT_MID_IN_DELAY SLOT_MID_OUT_DELAY + SLOT_MID_OUT_DURATION + 0
 #define SLOT_BOT_IN_DELAY SLOT_BOT_OUT_DELAY + SLOT_BOT_OUT_DURATION + 100
 
+#define SLOT_TOP_SPLASH_DURATION 1200
+#define SLOT_MID_SPLASH_DURATION 1200
+#define SLOT_BOT_SPLASH_DURATION 1200
+
 #define SCREEN_HEIGHT 168
 #define SCREEN_WIDTH 144
 
@@ -45,4 +54,7 @@ int determine_image_from_value(int slot_number, int slot_value);
 void unload_image_from_slot(int slot_number);
 
 void display_time(PblTm *tick_time);
-void animate_slot(int slot_number, bool in);
+void animate_slot(int slot_number);
+
+void load_splash_screen();
+void animate_splash(int slot_number);

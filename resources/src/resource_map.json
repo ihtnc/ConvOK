@@ -1,6 +1,21 @@
 {
     "media": [
         {
+            "defName": "IMAGE_BOT_SPLASH",
+            "type": "png",
+            "file": "images/bot_splash.png"
+        },
+        {
+            "defName": "IMAGE_MID_SPLASH",
+            "type": "png",
+            "file": "images/mid_splash.png"
+        },
+        {
+            "defName": "IMAGE_TOP_SPLASH",
+            "type": "png",
+            "file": "images/top_splash.png"
+        },
+        {
             "defName": "IMAGE_TOP_EXACT",
             "type": "png",
             "file": "images/top_exact.png"
