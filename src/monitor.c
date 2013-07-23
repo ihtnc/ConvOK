@@ -3,8 +3,8 @@
 #include "monitor.h"
 
 static bool is_connected;
-static uint8_t retry_freq_count = 14;
-static uint8_t retry_freq[] = {1, 1, 1, 1, 1, 5, 5, 5, 5, 5, 30, 30, 30, 60};
+static uint8_t retry_freq_count = 13;
+static uint8_t retry_freq[] = {1, 1, 1, 1, 5, 5, 5, 5, 5, 30, 30, 30, 60};
 static uint8_t retry_index = 0;
 static int initial_disconnect;
 const VibePattern vibes_disconnect_pattern = 
