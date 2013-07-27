@@ -3,6 +3,8 @@
 #include "pebble_fonts.h"
 #include "ConvOK_v2.h"
 #include "monitor.h"
+#include "app_info.h"
+#include "app_options.h"
 
 /* 
 Because of the way that httpebble works, a different UUID is needed for Android and iOS compatibility. 
@@ -10,21 +12,14 @@ If you are building this to use with Android, then leave the #define ANDROID lin
 you're building for iOS then remove or comment out that line.
 */
 
-//#define ANDROID
 #ifdef ANDROID
 	#define MY_UUID { 0x91, 0x41, 0xB6, 0x28, 0xBC, 0x89, 0x49, 0x8E, 0xB1, 0x47, 0x10, 0x34, 0xBF, 0xBE, 0x12, 0x98 }
 #else
 	#define MY_UUID HTTP_UUID
 #endif
-
-PBL_APP_INFO(MY_UUID,
-             #ifndef DEBUG
-               "Conversation with Orange Kid v2",
-             #else
-               "ConvOKv2-debug",
-             #endif
-             "ihopethisnamecounts",
-             1, 4, /* App version */
+	
+PBL_APP_INFO(MY_UUID, APP_NAME, APP_AUTHOR,
+             APP_VER_MAJOR, APP_VER_MINOR, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
