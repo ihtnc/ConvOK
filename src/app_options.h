@@ -2,7 +2,7 @@
 //This is to speed up the transition of the animations
 //#define DEBUG
 
-#define PHONE_HAS_HTTPPEBBLE
+//#define PHONE_HAS_HTTPPEBBLE
 //#define ANDROID
 
 #define SLOT_XOFFSET 0
@@ -13,6 +13,14 @@
 #define SLOT_TOP_SPLASH_XOFFSET 10
 #define SLOT_MID_SPLASH_XOFFSET 20
 #define SLOT_BOT_SPLASH_XOFFSET 0
+
+//If INVERT_MODE is INVERT_ALWAYS, then the color will be inverted (white on black text)
+//If INVERT_MODE is INVERT_IN_AM, then the color will only be inverted from 12:00AM to 11:59AM
+//Otherwise the color will not be inverted.
+#define INVERT_NEVER 0
+#define INVERT_ON_AM 1
+#define INVERT_ALWAYS 2
+#define INVERT_MODE INVERT_NEVER
 
 //Duration and delay are in ms
 //Note: In debug mode, be aware that every 15 seconds, the top slot will change again after just 1000ms.

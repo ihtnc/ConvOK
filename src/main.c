@@ -46,6 +46,7 @@ PBL_APP_INFO(MY_UUID, APP_NAME, APP_AUTHOR,
 */
 
 Window window;
+InverterLayer inverter;
 bool show_splash;
 
 //These 2 image containers are needed for animation (1 for the current image and 1 for the previous image).
@@ -103,6 +104,20 @@ const int IMAGE_RESOURCE_BOT_IDS[4] =
  	 RESOURCE_ID_IMAGE_BOT_00, RESOURCE_ID_IMAGE_BOT_15,
  	 RESOURCE_ID_IMAGE_BOT_30, RESOURCE_ID_IMAGE_BOT_45
 };
+
+void determine_invert_status(PblTm *tick_time)
+{
+	bool invert;
+	
+	if(INVERT_MODE == INVERT_ON_AM)
+		invert = (tick_time->tm_hour < 12);
+	else if(INVERT_MODE == INVERT_ALWAYS)
+		invert = true;
+	else
+		invert = false;
+	
+	layer_set_frame(&inverter.layer, GRect(0, 0, SCREEN_WIDTH, (invert ? SCREEN_HEIGHT : 0)));
+}
 
 void load_image_to_slot(int slot_number, int hour_value, int minute_value) 
 {
@@ -170,14 +185,14 @@ void load_image_to_slot(int slot_number, int hour_value, int minute_value)
 	bmp_init_container(resourceid, &image_containers[slot_number]);
 	image_containers[slot_number].layer.layer.frame.origin.x = SLOT_XOFFSET + SCREEN_WIDTH;
 	image_containers[slot_number].layer.layer.frame.origin.y = SLOT_YOFFSETS[slot_number];
-	layer_add_child(&window.layer, &image_containers[slot_number].layer.layer);
-	
+	layer_insert_below_sibling(&image_containers[slot_number].layer.layer, &inverter.layer);
+
 	//Load the image based on the previous state
 	int prevresourceid = determine_image_from_value(slot_number, prevslot_state);
 	bmp_init_container(prevresourceid, &previmage_containers[slot_number]);
 	previmage_containers[slot_number].layer.layer.frame.origin.x = SLOT_XOFFSET;
 	previmage_containers[slot_number].layer.layer.frame.origin.y =  SLOT_YOFFSETS[slot_number];
-	layer_add_child(&window.layer, &previmage_containers[slot_number].layer.layer);
+	layer_insert_below_sibling(&previmage_containers[slot_number].layer.layer, &inverter.layer);
 	
 	image_slot_state[slot_number] = slot_value;
 	animate_slot(slot_number);
@@ -231,16 +246,18 @@ void unload_image_from_slot(int slot_number)
 
 void display_time(PblTm *tick_time) 
 {
+	determine_invert_status(tick_time);
+		
 	if(show_splash == true) { return; }
-	  
-	#ifndef DEBUG
+
+		#ifndef DEBUG
 		int normalized_hour = tick_time->tm_hour % 12;
 		int normalized_minute = tick_time->tm_min;
 	#else
 		int normalized_hour = tick_time->tm_min % 12;
 		int normalized_minute = tick_time->tm_sec;
 	#endif
-	  
+	
 	load_image_to_slot(SLOT_TOP, normalized_hour, normalized_minute);
 	load_image_to_slot(SLOT_MID, normalized_hour, normalized_minute);
 	load_image_to_slot(SLOT_BOT, normalized_hour, normalized_minute);
@@ -296,6 +313,10 @@ void animate_slot(int slot_number)
 
 void load_splash_screen() 
 {
+	PblTm time;
+	get_time(&time);
+	determine_invert_status(&time);
+	
 	show_splash = true;
 	
 	bmp_init_container(RESOURCE_ID_IMAGE_TOP_SPLASH, &splash_containers[SLOT_TOP]);
@@ -304,15 +325,15 @@ void load_splash_screen()
 	  
 	splash_containers[SLOT_TOP].layer.layer.frame.origin.x = SLOT_XOFFSET;
 	splash_containers[SLOT_TOP].layer.layer.frame.origin.y = SLOT_YOFFSETS[SLOT_TOP];
-	layer_add_child(&window.layer, &splash_containers[SLOT_TOP].layer.layer);
+	layer_insert_below_sibling(&splash_containers[SLOT_TOP].layer.layer, &inverter.layer);
 	
 	splash_containers[SLOT_MID].layer.layer.frame.origin.x = SLOT_XOFFSET;
 	splash_containers[SLOT_MID].layer.layer.frame.origin.y = SLOT_YOFFSETS[SLOT_MID];
-	layer_add_child(&window.layer, &splash_containers[SLOT_MID].layer.layer);
+	layer_insert_below_sibling(&splash_containers[SLOT_MID].layer.layer, &inverter.layer);
 	  
 	splash_containers[SLOT_BOT].layer.layer.frame.origin.x = SLOT_XOFFSET;
 	splash_containers[SLOT_BOT].layer.layer.frame.origin.y = SLOT_YOFFSETS[SLOT_BOT];
-	layer_add_child(&window.layer, &splash_containers[SLOT_BOT].layer.layer);
+	layer_insert_below_sibling(&splash_containers[SLOT_BOT].layer.layer, &inverter.layer);
 	
 	image_slot_state[SLOT_TOP] = SLOT_SPLASH;
 	image_slot_state[SLOT_MID] = SLOT_SPLASH;
@@ -321,6 +342,12 @@ void load_splash_screen()
 	animate_splash(SLOT_TOP);
 	animate_splash(SLOT_MID);
 	animate_splash(SLOT_BOT);
+}
+
+void load_inverter()
+{
+	inverter_layer_init(&inverter, GRect(0, 0, SCREEN_WIDTH, 0));
+	layer_add_child(&window.layer, &inverter.layer);
 }
 
 void slot_splash_animation_stopped(Animation *animation, void *data)
@@ -381,9 +408,8 @@ void handle_init(AppContextRef ctx)
 	slot_splash_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET - SLOT_MID_SPLASH_XOFFSET, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
 	slot_splash_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET + SLOT_BOT_SPLASH_XOFFSET, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
 	
-	monitor_init(ctx);  
-	
-	// Avoids a blank screen on watch start.
+	monitor_init(ctx);
+	load_inverter();
 	load_splash_screen();
 }
 
