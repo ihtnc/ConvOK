@@ -8,7 +8,9 @@ static bool needs_vibe;
 static uint8_t vibe_freq_count = 13;
 static uint8_t vibe_freq[] = {1, 1, 1, 1, 5, 5, 5, 5, 5, 30, 30, 30, 60};
 static uint8_t vibe_index = 0;
+static uint8_t ping_freq = 1;
 static int initial_disconnect;
+
 const VibePattern vibes_disconnect_pattern = 
 {
 	.durations = (uint32_t []) {200, 100, 200, 100, 400, 200},
@@ -78,27 +80,35 @@ void ping()
 	#ifdef PHONE_HAS_HTTPPEBBLE
 		needs_vibe = true;
 	
+		static PblTm time;
+		get_time(&time);
+	
+		//if connected, this method will ping only on the specified frequency
+		//if disconnected, this method will always ping
+	
 		if(is_connected == false)
-		{
-			static PblTm time;
-			get_time(&time);
-			
+		{		
 			//if still disconnected, the vibrate frequency gets reduced over time, until it no longer vibrates 
 			if(vibe_index > vibe_freq_count) needs_vibe = false;
 			else if(time.tm_min % vibe_freq[vibe_index] != initial_disconnect % vibe_freq[vibe_index]) needs_vibe = false;
 			else vibe_index++;
+		}
+		else
+		{
+			if(time.tm_min % ping_freq != 0) return;
 		}
 		
 		http_time_request();
 	#endif
 }
 
-void monitor_init(AppContextRef ctx) 
+void monitor_init(AppContextRef ctx, uint8_t ping_frequency) 
 {
 	http_set_app_id(APP_ID);
 	
 	vibe_index = 0;
 	is_connected = true;
+	ping_freq = ping_frequency;
 	
 	http_register_callbacks((HTTPCallbacks)
 							{

@@ -408,7 +408,7 @@ void handle_init(AppContextRef ctx)
 	slot_splash_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET - SLOT_MID_SPLASH_XOFFSET, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
 	slot_splash_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET + SLOT_BOT_SPLASH_XOFFSET, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
 	
-	monitor_init(ctx);
+	monitor_init(ctx, PING_FREQUENCY);
 	load_inverter();
 	load_splash_screen();
 }
@@ -427,6 +427,7 @@ void handle_minute_tick(AppContextRef ctx, PebbleTickEvent *t)
 {
 	(void)ctx;
 	display_time(t->tick_time);
+	
 	ping();
 }
 

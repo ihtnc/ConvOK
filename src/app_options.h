@@ -2,7 +2,7 @@
 //This is to speed up the transition of the animations
 //#define DEBUG
 
-//#define PHONE_HAS_HTTPPEBBLE
+#define PHONE_HAS_HTTPPEBBLE
 //#define ANDROID
 
 #define SLOT_XOFFSET 0
@@ -20,7 +20,10 @@
 #define INVERT_NEVER 0
 #define INVERT_ON_AM 1
 #define INVERT_ALWAYS 2
-#define INVERT_MODE INVERT_NEVER
+#define INVERT_MODE INVERT_ON_AM
+
+//Frequency is in minutes
+#define PING_FREQUENCY 5
 
 //Duration and delay are in ms
 //Note: In debug mode, be aware that every 15 seconds, the top slot will change again after just 1000ms.
