@@ -48,10 +48,13 @@ Window *window;
 InverterLayer *inverter;
 bool show_splash;
 
+GBitmap *images[SLOTS_COUNT];
+GBitmap *previmages[SLOTS_COUNT];
+GBitmap *splashimages[SLOTS_COUNT];
+
 //These 2 image containers are needed for animation (1 for the current image and 1 for the previous image).
 BitmapLayer *image_containers[SLOTS_COUNT];
 BitmapLayer *previmage_containers[SLOTS_COUNT];
-
 BitmapLayer *splash_containers[SLOTS_COUNT]; //Image containers for the splash screen
 
 GRect slot_rectangles[SLOTS_COUNT];        //Current frame
