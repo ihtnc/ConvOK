@@ -1,6 +1,7 @@
 //Debug mode treats the watch's minute value as the hour value and the watch's second value as the minute value.
 //This is to speed up the transition of the animations
 //#define DEBUG
+#define ENABLE_LOGGING
 
 //#define ANDROID
 
@@ -10,4 +11,3 @@
 #define INVERT_NEVER 0
 #define INVERT_ON_AM 1
 #define INVERT_ALWAYS 2
-#define INVERT_MODE INVERT_ON_AM

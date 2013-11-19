@@ -26,21 +26,30 @@
 
 void determine_invert_status(struct tm *tick_time)
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status start...");
 	bool invert;
 	
-	if(INVERT_MODE == INVERT_ON_AM)
+	if(invert_mode == INVERT_ON_AM)
+	{
 		invert = (tick_time->tm_hour < 12);
-	else if(INVERT_MODE == INVERT_ALWAYS)
+	}
+	else if(invert_mode == INVERT_ALWAYS)
+	{
 		invert = true;
+	}
 	else
+	{
 		invert = false;
+	}
 	
-	Layer *inv_layer = inverter_layer_get_layer(inverter);
-	layer_set_frame(inv_layer, GRect(0, 0, SCREEN_WIDTH, (invert ? SCREEN_HEIGHT : 0)));
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status end.");
+	layer_set_frame(inverter_layer_get_layer(inverter), GRect(0, 0, SCREEN_WIDTH, (invert ? SCREEN_HEIGHT : 0)));
+	
+	#ifdef ENABLE_LOGGING
+		if(invert == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: inverted");
+		else APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: not inverted");
+	#endif
 }
 
+/*
 int determine_image_from_value(int slot_number, int slot_value)
 {
 	//If the value is invalid, just show the splash image
@@ -311,210 +320,325 @@ void display_time(struct tm *tick_time)
 	load_image_to_slot(SLOT_BOT, normalized_hour, normalized_minute);
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "display_time end.");
 }
+*/
 
-void slot_splash_animation_stopped(Animation *animation, void *data)
+
+void splash_deinit(int slot_number)
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "slot_splash_animation_stopped start...");
+	property_animation_destroy(slots[slot_number].animation_in);
+	property_animation_destroy(slots[slot_number].animation_out);
+	
+	layer_remove_from_parent(bitmap_layer_get_layer(slots[slot_number].layer));
+	bitmap_layer_destroy(slots[slot_number].layer);
+	gbitmap_destroy(slots[slot_number].image);
+	
+	#ifdef ENABLE_LOGGING
+		char *output = "splash_deinit: X";
+		snprintf(output, strlen(output), "splash_deinit: %d", slot_number);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	#endif
+}
+
+void slot_splash_animation_in_stopped(Animation *animation,  bool finished, void *data)
+{
 	(void)animation;
-	(void)data;
+	int slot_number = (int)data;
+	
+	animation_schedule((Animation*)slots[slot_number].animation_out);
+	
+	#ifdef ENABLE_LOGGING
+		char *output = "slot_splash_animation_in_stopped: X";
+		snprintf(output, strlen(output), "slot_splash_animation_in_stopped: %d", slot_number);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	#endif
+}
+
+void slot_splash_animation_out_stopped(Animation *animation,  bool finished, void *data)
+{
+	(void)animation;
+	int slot_number = (int)data;
+	
+	#ifdef ENABLE_LOGGING
+		char *output = "slot_splash_animation_out_stopped: X";
+		snprintf(output, strlen(output), "slot_splash_animation_out_stopped: %d", slot_number);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	#endif
 		
-	show_splash = false;	
-
-	time_t t = time(NULL);
-	struct tm *local = localtime(&t);
-	display_time(local);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "slot_splash_animation_stopped end.");
-}
-
-void splash_slot_init(int slot_number)
-{
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_slot_init start...");
-	Layer *inv_layer = inverter_layer_get_layer(inverter);
-	
-	if(slot_number == SLOT_TOP)
-		splashimages[slot_number] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_TOP_SPLASH);
-	else if(slot_number == SLOT_MID)
-		splashimages[slot_number] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_MID_SPLASH);
-	else if(slot_number == SLOT_BOT)
-		splashimages[slot_number] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BOT_SPLASH);
-	
-	BitmapLayer *bmp_layer = bitmap_layer_create(slot_rectangles[slot_number]);
-	bitmap_layer_set_bitmap(bmp_layer, splashimages[slot_number]);
-	
-	Layer *spl_layer = bitmap_layer_get_layer(bmp_layer);
-	GRect spl_frame = layer_get_frame(spl_layer);
-	spl_frame.origin.x = SLOT_XOFFSET;
-	spl_frame.origin.y = SLOT_YOFFSETS[slot_number];
-	layer_set_frame(spl_layer, spl_frame);
-	layer_insert_below_sibling(spl_layer, inv_layer);
-	
-	PropertyAnimation *anim =
-		property_animation_create_layer_frame(spl_layer, 
-											  &slot_splash_rectangles[slot_number], 
-											  &slot_rectangles[slot_number]);
-	
-	animation_set_duration(&anim->animation, SLOT_SPLASH_ANIMATION_DURATIONS[slot_number]);
-	animation_set_curve(&anim->animation, AnimationCurveEaseInOut);
-	animation_set_handlers(&anim->animation,
-						   (AnimationHandlers)
-						   {
-							   .stopped = (AnimationStoppedHandler)slot_splash_animation_stopped
-						   }, 
-						   NULL);
-	
-	slot_splash_animations[slot_number] = anim;
-	splash_containers[slot_number] = bmp_layer;
-	
-	image_slot_state[slot_number] = SLOT_SPLASH;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_slot_init end.");
-}
-
-void splash_slot_deinit(int slot_number)
-{
-	animation_destroy(&slot_splash_animations[slot_number]->animation);
-	property_animation_destroy(slot_splash_animations[slot_number]);
-	
-	Layer *spl_layer = bitmap_layer_get_layer(splash_containers[slot_number]);
-	layer_remove_from_parent(spl_layer);
-	bitmap_layer_destroy(splash_containers[slot_number]);
-	gbitmap_destroy(splashimages[slot_number]);
+	splash_deinit(slot_number);
 }
 
 void animate_splash(int slot_number)
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "animate_splash start...");
-	if(show_splash == false) { return; }
-	if(image_slot_state[slot_number] != SLOT_SPLASH) { return; }
+	if(slots[slot_number].state != SLOT_STATE_SPLASH) { return; }
 	
-	animation_schedule(&slot_splash_animations[slot_number]->animation);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "animat_splash end.");
+	animation_schedule((Animation*)slots[slot_number].animation_in);
+	
+	#ifdef ENABLE_LOGGING
+		char *output = "animate_splash: X";
+		snprintf(output, strlen(output), "animate_splash: %d", slot_number);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	#endif
 }
 
 void splash_init() 
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_init start...");
-
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "retrieve time start...");	
 	time_t t = time(NULL);
 	struct tm *local = localtime(&t);
 	determine_invert_status(local);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "retrieve time end.");
-
-	show_splash = true;
 	
-	splash_slot_init(SLOT_TOP);
-	splash_slot_init(SLOT_MID);
-	splash_slot_init(SLOT_BOT);
+	//load top slot image
+	slots[SLOT_TOP].slot_number = SLOT_TOP;
+	slots[SLOT_TOP].image = gbitmap_create_with_resource(IMAGE_RESOURCE_SPLASH_IDS[SLOT_TOP]);
+	GRect top_in_from_frame = GRect(info[SLOT_TOP].offset_x + info[SLOT_TOP].offset_splash_x, 
+									info[SLOT_TOP].offset_splash_y,
+									SCREEN_WIDTH,
+									info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
+	GRect top_in_to_frame = GRect(info[SLOT_TOP].offset_x, 
+								  info[SLOT_TOP].offset_y, 
+								  SCREEN_WIDTH, 
+								  info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
+	GRect top_out_to_frame = GRect(info[SLOT_TOP].offset_x - SCREEN_WIDTH, 
+								   info[SLOT_TOP].offset_y, 
+								   SCREEN_WIDTH, 
+								   info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
+	slots[SLOT_TOP].layer = bitmap_layer_create(top_in_from_frame);	
 	
-	animate_splash(SLOT_TOP);
-	animate_splash(SLOT_MID);
-	animate_splash(SLOT_BOT);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_init end.");
-}
-
-void splash_deinit()
-{
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_deinit start...");
-	splash_slot_deinit(SLOT_TOP);
-	splash_slot_deinit(SLOT_MID);
-	splash_slot_deinit(SLOT_BOT);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_deinit end.");
+	bitmap_layer_set_bitmap(slots[SLOT_TOP].layer, slots[SLOT_TOP].image);
+	layer_insert_below_sibling(bitmap_layer_get_layer(slots[SLOT_TOP].layer), inverter_layer_get_layer(inverter));
+	
+	//setup top slot animation in
+	slots[SLOT_TOP].animation_in_from_frame = top_in_from_frame;
+	slots[SLOT_TOP].animation_in_to_frame = top_in_to_frame;
+	slots[SLOT_TOP].animation_in = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_TOP].layer),
+																		&slots[SLOT_TOP].animation_in_from_frame, 
+																		&slots[SLOT_TOP].animation_in_to_frame);
+	animation_set_duration((Animation*)slots[SLOT_TOP].animation_in, info[SLOT_TOP].animation_duration_splash);
+	animation_set_curve((Animation*)slots[SLOT_TOP].animation_in, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[SLOT_TOP].animation_in,
+						   (AnimationHandlers)
+						   {
+							   .stopped = (AnimationStoppedHandler)slot_splash_animation_in_stopped
+						   }, 
+						   &slots[SLOT_TOP].slot_number);
+	
+	//setup top slot animation out
+	slots[SLOT_TOP].animation_out_from_frame = top_in_to_frame;
+	slots[SLOT_TOP].animation_out_to_frame = top_out_to_frame;
+	slots[SLOT_TOP].animation_out = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_TOP].layer),
+																		 &slots[SLOT_TOP].animation_out_from_frame, 
+																		 &slots[SLOT_TOP].animation_out_to_frame);
+	animation_set_duration((Animation*)slots[SLOT_TOP].animation_out, info[SLOT_TOP].animation_duration_out);
+	animation_set_curve((Animation*)slots[SLOT_TOP].animation_out, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[SLOT_TOP].animation_out,
+						   (AnimationHandlers)
+						   {
+							   .stopped = (AnimationStoppedHandler)slot_splash_animation_out_stopped
+						   }, 
+						   &slots[SLOT_TOP].slot_number);
+	
+	slots[SLOT_TOP].state = SLOT_STATE_SPLASH;
+		
+	//load mid slot image
+	slots[SLOT_MID].slot_number = SLOT_MID;
+	slots[SLOT_MID].image = gbitmap_create_with_resource(IMAGE_RESOURCE_SPLASH_IDS[SLOT_MID]);
+	GRect mid_in_from_frame = GRect(info[SLOT_MID].offset_x - info[SLOT_MID].offset_splash_x, 
+									info[SLOT_MID].offset_splash_y,
+									SCREEN_WIDTH,
+									info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);
+	GRect mid_in_to_frame = GRect(info[SLOT_MID].offset_x, 
+								  info[SLOT_MID].offset_y, 
+								  SCREEN_WIDTH, 
+								  info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);	
+	GRect mid_out_to_frame = GRect(info[SLOT_MID].offset_x - SCREEN_WIDTH, 
+								   info[SLOT_MID].offset_y, 
+								   SCREEN_WIDTH, 
+								   info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);
+	slots[SLOT_MID].layer = bitmap_layer_create(mid_in_from_frame);	
+	
+	bitmap_layer_set_bitmap(slots[SLOT_MID].layer, slots[SLOT_MID].image);
+	layer_insert_below_sibling(bitmap_layer_get_layer(slots[SLOT_MID].layer), inverter_layer_get_layer(inverter));
+	
+	//setup mid slot animation in
+	slots[SLOT_MID].animation_in_from_frame = mid_in_from_frame;
+	slots[SLOT_MID].animation_in_to_frame = mid_in_to_frame;
+	slots[SLOT_MID].animation_in = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_MID].layer),
+																		&slots[SLOT_MID].animation_in_from_frame, 
+																		&slots[SLOT_MID].animation_in_to_frame);
+	animation_set_duration((Animation*)slots[SLOT_MID].animation_in, info[SLOT_MID].animation_duration_splash);
+	animation_set_curve((Animation*)slots[SLOT_MID].animation_in, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[SLOT_MID].animation_in,
+						   (AnimationHandlers)
+						   {
+							   .stopped = (AnimationStoppedHandler)slot_splash_animation_in_stopped
+						   }, 
+						   &slots[SLOT_MID].slot_number);
+	
+	//setup mid slot animation out
+	slots[SLOT_MID].animation_out_from_frame = mid_in_to_frame;
+	slots[SLOT_MID].animation_out_to_frame = mid_out_to_frame;
+	slots[SLOT_MID].animation_out = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_MID].layer),
+																		 &slots[SLOT_MID].animation_out_from_frame, 
+																		 &slots[SLOT_MID].animation_out_to_frame);
+	animation_set_duration((Animation*)slots[SLOT_MID].animation_out, info[SLOT_MID].animation_duration_out);
+	animation_set_curve((Animation*)slots[SLOT_MID].animation_out, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[SLOT_MID].animation_out,
+						   (AnimationHandlers)
+						   {
+							   .stopped = (AnimationStoppedHandler)slot_splash_animation_out_stopped
+						   }, 
+						   &slots[SLOT_MID].slot_number);
+	
+	slots[SLOT_MID].state = SLOT_STATE_SPLASH;
+	
+	//load bot slot image
+	slots[SLOT_BOT].slot_number = SLOT_BOT;
+	slots[SLOT_BOT].image = gbitmap_create_with_resource(IMAGE_RESOURCE_SPLASH_IDS[SLOT_BOT]);
+	GRect bot_in_from_frame = GRect(info[SLOT_BOT].offset_x + info[SLOT_BOT].offset_splash_x, 
+									info[SLOT_BOT].offset_splash_y,
+									SCREEN_WIDTH,
+									SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
+	GRect bot_in_to_frame = GRect(info[SLOT_BOT].offset_x, 
+								  info[SLOT_BOT].offset_y, 
+								  SCREEN_WIDTH, 
+								  SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
+	GRect bot_out_to_frame = GRect(info[SLOT_BOT].offset_x - SCREEN_WIDTH, 
+								   info[SLOT_BOT].offset_y, 
+								   SCREEN_WIDTH, 
+								   SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
+	slots[SLOT_BOT].layer = bitmap_layer_create(bot_in_from_frame);	
+	
+	bitmap_layer_set_bitmap(slots[SLOT_BOT].layer, slots[SLOT_BOT].image);
+	layer_insert_below_sibling(bitmap_layer_get_layer(slots[SLOT_BOT].layer), inverter_layer_get_layer(inverter));
+	
+	//setup bot slot animation in
+	slots[SLOT_BOT].animation_in_from_frame = bot_in_from_frame;
+	slots[SLOT_BOT].animation_in_to_frame = bot_in_to_frame;
+	slots[SLOT_BOT].animation_in = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_BOT].layer),
+																		&slots[SLOT_BOT].animation_in_from_frame, 
+																		&slots[SLOT_BOT].animation_in_to_frame);
+	
+	animation_set_duration((Animation*)slots[SLOT_BOT].animation_in, info[SLOT_BOT].animation_duration_splash);
+	animation_set_curve((Animation*)slots[SLOT_BOT].animation_in, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[SLOT_BOT].animation_in,
+						   (AnimationHandlers)
+						   {
+							   .stopped = (AnimationStoppedHandler)slot_splash_animation_in_stopped
+						   }, 
+						   &slots[SLOT_BOT].slot_number);
+	
+	//setup bot slot animation out
+	slots[SLOT_BOT].animation_out_from_frame = bot_in_to_frame;
+	slots[SLOT_BOT].animation_out_to_frame = bot_out_to_frame;
+	slots[SLOT_BOT].animation_out = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_BOT].layer),
+																		 &slots[SLOT_BOT].animation_out_from_frame, 
+																		 &slots[SLOT_BOT].animation_out_to_frame);
+	
+	animation_set_duration((Animation*)slots[SLOT_BOT].animation_out, info[SLOT_BOT].animation_duration_out);
+	animation_set_curve((Animation*)slots[SLOT_BOT].animation_out, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[SLOT_BOT].animation_out,
+						   (AnimationHandlers)
+						   {
+							   .stopped = (AnimationStoppedHandler)slot_splash_animation_out_stopped
+						   }, 
+						   &slots[SLOT_BOT].slot_number);
+	
+	slots[SLOT_BOT].state = SLOT_STATE_SPLASH;
+	
+	#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_init: done");
+	#endif
 }
 
 void inverter_init()
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init start...");
+	invert_mode = INVERT_ON_AM;
 	inverter = inverter_layer_create(GRect(0, 0, SCREEN_WIDTH, 0));
-	Layer *inv_layer = inverter_layer_get_layer(inverter);
-	Layer *win_layer = window_get_root_layer(window);
-	layer_add_child(win_layer, inv_layer);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init end.");
+	layer_add_child(window_get_root_layer(window), inverter_layer_get_layer(inverter));
+	
+	#ifdef ENABLE_LOGGING
+		if(invert_mode == INVERT_ON_AM) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ON_AM");
+		else if(invert_mode == INVERT_ALWAYS) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ALWAYS");
+		else if(invert_mode == INVERT_NEVER) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_NEVER");
+		else APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: invalid invert_mode; default=INVERT_NEVER");
+	#endif
 }
 
 void inverter_deinit()
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_deinit start...");
-	Layer *inv_layer = inverter_layer_get_layer(inverter);
-	layer_remove_from_parent(inv_layer);
+	layer_remove_from_parent(inverter_layer_get_layer(inverter));
 	inverter_layer_destroy(inverter);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_deinit end.");
+							 
+	#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_deinit: done");
+	#endif
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick start...");
-	display_time(tick_time);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick end.");
+	#ifdef ENABLE_LOGGING
+		char *output = "handle_tick: MM/dd/yyyy hh:mm:ss";
+		strftime(output, strlen(output), "handle_tick: %D %T", tick_time);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	#endif
+	
+	//display_time(tick_time);
 }
 
 void handle_init()
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_init start...");
-	memset(&image_containers, 0, sizeof(image_containers));
-	memset(&previmage_containers, 0, sizeof(previmage_containers));
-	memset(&splash_containers, 0, sizeof(splash_containers));
-	memset(&images, 0, sizeof(images));
-	memset(&previmages, 0, sizeof(previmages));
-	memset(&splashimages, 0, sizeof(splashimages));
-	memset(&slot_out_animations, 0, sizeof(slot_out_animations));
-	memset(&slot_in_animations, 0, sizeof(slot_in_animations));
-	memset(&slot_splash_animations, 0, sizeof(slot_splash_animations));
-
 	window = window_create();
 	window_stack_push(window, true);	
 	window_set_background_color(window, GColorBlack);
 
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe start...");
 	#ifndef DEBUG
 		tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
+		#ifdef ENABLE_LOGGING
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe: MINUTE_UNIT");
+		#endif
 	#else
 		tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
+		#ifdef ENABLE_LOGGING
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe: SECOND_UNIT");
+		#endif
 	#endif
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe end.");
 	
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "initialize rectangles start...");
-	slot_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
-	slot_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
-	slot_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
-	  
-	slot_in_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET + SCREEN_WIDTH, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
-	slot_in_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET + SCREEN_WIDTH, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
-	slot_in_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET + SCREEN_WIDTH, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
-	
-	slot_out_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
-	slot_out_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
-	slot_out_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET - SCREEN_WIDTH, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
-	  
-	slot_splash_rectangles[SLOT_TOP] = GRect(SLOT_XOFFSET + SLOT_TOP_SPLASH_XOFFSET, SLOT_TOP_YOFFSET, SCREEN_WIDTH, SLOT_MID_YOFFSET - SLOT_TOP_YOFFSET);
-	slot_splash_rectangles[SLOT_MID] = GRect(SLOT_XOFFSET - SLOT_MID_SPLASH_XOFFSET, SLOT_MID_YOFFSET, SCREEN_WIDTH, SLOT_BOT_YOFFSET - SLOT_MID_YOFFSET);
-	slot_splash_rectangles[SLOT_BOT] = GRect(SLOT_XOFFSET + SLOT_BOT_SPLASH_XOFFSET, SLOT_BOT_YOFFSET, SCREEN_WIDTH, SCREEN_HEIGHT - SLOT_BOT_YOFFSET);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "initialize rectangles end.");
-
 	//btmonitor_init(true);
+	
 	inverter_init();
 	splash_init();
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_init end.");
+	
+	#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_init: done");
+	#endif
 }
 
 void handle_deinit() 
 {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit start...");
+	/*
+	
 	for (int i = 0; i < SLOTS_COUNT; i++) 
 	{
 		unload_image_from_slot(i);
 	}
 	
 	//btmonitor_deinit();
+	*/
 	inverter_deinit();
-	splash_deinit();
 
 	tick_timer_service_unsubscribe();
 	window_destroy(window);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit end.");
+	
+	#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit: done");
+	#endif
 }
 
 int main(void) 
 {
+	#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "main: start");
+	#endif
+		
 	handle_init();
 	app_event_loop();
 	handle_deinit();

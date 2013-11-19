@@ -1,87 +1,96 @@
 #include "pebble.h"
 	
 #define SLOTS_COUNT 3
-#define SLOT_STATUS_EMPTY -1
-#define SLOT_SPLASH -2
+	
+#define SLOT_STATE_NORMAL 0
+#define SLOT_STATE_EMPTY -1
+#define SLOT_STATE_SPLASH -2
 	
 #define SLOT_TOP 0
 #define SLOT_MID 1
 #define SLOT_BOT  2
-
-#define SLOT_XOFFSET 0
-#define SLOT_TOP_YOFFSET 0
-#define SLOT_MID_YOFFSET 30
-#define SLOT_BOT_YOFFSET 104
-
-#define SLOT_TOP_SPLASH_XOFFSET 10
-#define SLOT_MID_SPLASH_XOFFSET 20
-#define SLOT_BOT_SPLASH_XOFFSET 0
-	
-//Duration and delay are in ms
-//Note: In debug mode, be aware that every 15 seconds, the top slot will change again after just 1000ms.
-//With this, ensure that the total animation duration of the top slot (out delay + out duration + in delay + in duration) does not reach 1000ms.
-//Otherwise the animation after every 15 seconds will get clunky.
-#define SLOT_TOP_OUT_DURATION 200
-#define SLOT_MID_OUT_DURATION 500
-#define SLOT_BOT_OUT_DURATION 400
-
-#define SLOT_TOP_OUT_DELAY 100
-#define SLOT_MID_OUT_DELAY 0
-#define SLOT_BOT_OUT_DELAY 300
-	
-#define SLOT_TOP_IN_DURATION 300
-#define SLOT_MID_IN_DURATION 500
-#define SLOT_BOT_IN_DURATION 200
-
-#define SLOT_TOP_IN_DELAY SLOT_TOP_OUT_DELAY + SLOT_TOP_OUT_DURATION + 200
-#define SLOT_MID_IN_DELAY SLOT_MID_OUT_DELAY + SLOT_MID_OUT_DURATION + 0
-#define SLOT_BOT_IN_DELAY SLOT_BOT_OUT_DELAY + SLOT_BOT_OUT_DURATION + 100
-
-#define SLOT_TOP_SPLASH_DURATION 1200
-#define SLOT_MID_SPLASH_DURATION 1200
-#define SLOT_BOT_SPLASH_DURATION 1200
 
 #define SCREEN_HEIGHT 168
 #define SCREEN_WIDTH 144
 	
 Window *window;
 InverterLayer *inverter;
-bool show_splash;
 
-GBitmap *images[SLOTS_COUNT];
-GBitmap *previmages[SLOTS_COUNT];
-GBitmap *splashimages[SLOTS_COUNT];
+int invert_mode;
 
-//These 2 image containers are needed for animation (1 for the current image and 1 for the previous image).
-BitmapLayer *image_containers[SLOTS_COUNT];
-BitmapLayer *previmage_containers[SLOTS_COUNT];
-BitmapLayer *splash_containers[SLOTS_COUNT]; //Image containers for the splash screen
+typedef struct
+{
+	GBitmap *image;
+	BitmapLayer *layer;
+	
+	PropertyAnimation *animation_in;
+	GRect animation_in_from_frame;
+	GRect animation_in_to_frame;
+	
+	PropertyAnimation *animation_out;
+	GRect animation_out_from_frame;
+	GRect animation_out_to_frame;
+	
+	int state;
+	int slot_number;
+} Slot;
+Slot slots[SLOTS_COUNT];
 
-GRect slot_rectangles[SLOTS_COUNT];        //Current frame
-GRect slot_out_rectangles[SLOTS_COUNT];    //Target frame of the scroll out animation
-GRect slot_in_rectangles[SLOTS_COUNT];     //Source frame of the scroll in animation
-GRect slot_splash_rectangles[SLOTS_COUNT]; //Source frame of the splash animation
+typedef struct
+{
+	int animation_duration_in;
+	int animation_duration_out;
+	int animation_duration_splash;
+	int animation_delay_in;
+	int animation_delay_out;
+	int offset_x;
+	int offset_y;
+	int offset_splash_x;
+	int offset_splash_y;
+} SlotInfo;
+SlotInfo info[SLOTS_COUNT] = 
+{
+	{
+		300, //animation_duration_in
+		200, //animation_duration_out
+		1200, //animation_duration_splash
+		200, //animation_delay_in
+		100, //animation_delay_out
+		0, //offset_x
+		0, //offset_y
+		10, //offset_splash_x
+		0 //offset_splash_y
+	},
+	{
+		500, //animation_duration_in
+		500, //animation_duration_out
+		1200, //animation_duration_splash
+		0, //animation_delay_in
+		0, //animation_delay_out
+		0, //offset_x
+		30, //offset_y
+		20, //offset_splash_x
+		0 //offset_splash_y
+	},
+	{
+		200, //animation_duration_in
+		400, //animation_duration_out
+		1200, //animation_duration_splash
+		100, //animation_delay_in
+		300, //animation_delay_out
+		0, //offset_x
+		104, //offset_y
+		0, //offset_splash_x
+		0 //offset_splash_y
+	}
+};
 
-//These 2 are used to animate the images (the current image is used on the in animation and the previous image is used in the out animation)
-PropertyAnimation *slot_out_animations[SLOTS_COUNT];
-PropertyAnimation *slot_in_animations[SLOTS_COUNT];
-
-PropertyAnimation *slot_splash_animations[SLOTS_COUNT]; //Used to animate the splash screen
-
-//Animation timings
-const int SLOT_OUT_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_OUT_DURATION, SLOT_MID_OUT_DURATION, SLOT_BOT_OUT_DURATION};
-const int SLOT_OUT_ANIMATION_DELAYS[SLOTS_COUNT] = {SLOT_TOP_OUT_DELAY, SLOT_MID_OUT_DELAY, SLOT_BOT_OUT_DELAY};
-const int SLOT_IN_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_IN_DURATION, SLOT_MID_IN_DURATION, SLOT_BOT_IN_DURATION};
-const int SLOT_IN_ANIMATION_DELAYS[SLOTS_COUNT] = {SLOT_TOP_IN_DELAY, SLOT_MID_IN_DELAY, SLOT_BOT_IN_DELAY};
-const int SLOT_SPLASH_ANIMATION_DURATIONS[SLOTS_COUNT] = {SLOT_TOP_SPLASH_DURATION, SLOT_MID_SPLASH_DURATION, SLOT_BOT_SPLASH_DURATION};
-
-//Position of the slots along the Y-axis
-const int SLOT_YOFFSETS[SLOTS_COUNT] = {SLOT_TOP_YOFFSET, SLOT_MID_YOFFSET, SLOT_BOT_YOFFSET};
-
-//The state of the slot can either be "empty" or the image currently in the slot.
-//This is to prevent the slot from unnecessarily reloading the image.
-int image_slot_state[SLOTS_COUNT] = {SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY};
-int previmage_slot_state[SLOTS_COUNT] = {SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY, SLOT_STATUS_EMPTY};
+const int IMAGE_RESOURCE_SPLASH_IDS[SLOTS_COUNT] = 
+{
+	RESOURCE_ID_IMAGE_TOP_SPLASH,
+	RESOURCE_ID_IMAGE_MID_SPLASH,
+	RESOURCE_ID_IMAGE_BOT_SPLASH
+};
 
 const int IMAGE_RESOURCE_TOP_IDS[4] = 
 {
