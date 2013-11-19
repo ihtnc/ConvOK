@@ -44,8 +44,8 @@ void determine_invert_status(struct tm *tick_time)
 	layer_set_frame(inverter_layer_get_layer(inverter), GRect(0, 0, SCREEN_WIDTH, (invert ? SCREEN_HEIGHT : 0)));
 	
 	#ifdef ENABLE_LOGGING
-		if(invert == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: inverted");
-		else APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: not inverted");
+	if(invert == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: inverted");
+	else APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: not inverted");
 	#endif
 }
 
@@ -325,227 +325,188 @@ void display_time(struct tm *tick_time)
 
 void splash_deinit(int slot_number)
 {
-	property_animation_destroy(slots[slot_number].animation_in);
-	property_animation_destroy(slots[slot_number].animation_out);
+	property_animation_destroy(slots[slot_number].animation);
 	
 	layer_remove_from_parent(bitmap_layer_get_layer(slots[slot_number].layer));
 	bitmap_layer_destroy(slots[slot_number].layer);
 	gbitmap_destroy(slots[slot_number].image);
 	
 	#ifdef ENABLE_LOGGING
-		char *output = "splash_deinit: X";
-		snprintf(output, strlen(output), "splash_deinit: %d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	char *output = "splash_deinit: XXX";
+	snprintf(output, strlen(output), "splash_deinit: %d", slot_number);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 	#endif
 }
 
-void slot_splash_animation_in_stopped(Animation *animation,  bool finished, void *data)
+void slot_splash_animation_out_stopped(Animation *animation, bool finished, void *data)
 {
 	(void)animation;
-	int slot_number = (int)data;
-	
-	animation_schedule((Animation*)slots[slot_number].animation_out);
+	int slot_number = *(int*)data;
 	
 	#ifdef ENABLE_LOGGING
-		char *output = "slot_splash_animation_in_stopped: X";
-		snprintf(output, strlen(output), "slot_splash_animation_in_stopped: %d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
-}
-
-void slot_splash_animation_out_stopped(Animation *animation,  bool finished, void *data)
-{
-	(void)animation;
-	int slot_number = (int)data;
-	
-	#ifdef ENABLE_LOGGING
-		char *output = "slot_splash_animation_out_stopped: X";
-		snprintf(output, strlen(output), "slot_splash_animation_out_stopped: %d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	char *output = "slot_splash_animation_out_stopped: XXX";
+	snprintf(output, strlen(output), "slot_splash_animation_out_stopped: %d", slot_number);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 	#endif
 		
 	splash_deinit(slot_number);
 }
 
-void animate_splash(int slot_number)
+void splash_animation_out_init(int slot_number)
 {
-	if(slots[slot_number].state != SLOT_STATE_SPLASH) { return; }
-	
-	animation_schedule((Animation*)slots[slot_number].animation_in);
-	
+	if(slot_number >= SLOTS_COUNT)
+	{
+		#ifdef ENABLE_LOGGING
+		char *error = "splash_animation_out_init: invalid value; slot_number=XXX";
+		snprintf(error, strlen(error), "splash_animation_out_init: invalid value; slot_number=%d", slot_number);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, error);
+		#endif
+
+		return;
+	}
+
+	property_animation_destroy(slots[slot_number].animation);
+
+	GRect from_frame;
+	GRect to_frame;
+
+	if(slot_number == SLOT_TOP)
+	{
+		from_frame = GRect(info[SLOT_TOP].offset_x, info[SLOT_TOP].offset_y, SCREEN_WIDTH, info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
+		to_frame = GRect(info[SLOT_TOP].offset_x - SCREEN_WIDTH, info[SLOT_TOP].offset_y, SCREEN_WIDTH, info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
+	}
+	else if(slot_number == SLOT_MID)
+	{
+		from_frame = GRect(info[SLOT_MID].offset_x, info[SLOT_MID].offset_y, SCREEN_WIDTH, info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);	
+		to_frame = GRect(info[SLOT_MID].offset_x - SCREEN_WIDTH, info[SLOT_MID].offset_y, SCREEN_WIDTH, info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);
+	}
+	else if(slot_number == SLOT_BOT)
+	{
+		from_frame = GRect(info[SLOT_BOT].offset_x, info[SLOT_BOT].offset_y, SCREEN_WIDTH, SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
+		to_frame = GRect(info[SLOT_BOT].offset_x - SCREEN_WIDTH, info[SLOT_BOT].offset_y, SCREEN_WIDTH, SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
+	}
+
+	slots[slot_number].animation_from_frame = from_frame;
+	slots[slot_number].animation_to_frame = to_frame;
+	slots[slot_number].animation = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[slot_number].layer), &slots[slot_number].animation_from_frame, &slots[slot_number].animation_to_frame);
+
+	animation_set_duration((Animation*)slots[slot_number].animation, info[slot_number].animation_duration_out);
+	animation_set_curve((Animation*)slots[slot_number].animation, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[slot_number].animation,
+						   (AnimationHandlers)
+						   { .stopped = (AnimationStoppedHandler)slot_splash_animation_out_stopped }, 
+						   &slots[slot_number].slot_number);
+
 	#ifdef ENABLE_LOGGING
-		char *output = "animate_splash: X";
-		snprintf(output, strlen(output), "animate_splash: %d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	char *output = "splash_animation_out_init: XXX";
+	snprintf(output, strlen(output), "splash_animation_out_init: %d", slot_number);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 	#endif
 }
 
-void splash_init() 
+void splash_animate(int slot_number)
 {
-	time_t t = time(NULL);
-	struct tm *local = localtime(&t);
-	determine_invert_status(local);
-	
-	//load top slot image
-	slots[SLOT_TOP].slot_number = SLOT_TOP;
-	slots[SLOT_TOP].image = gbitmap_create_with_resource(IMAGE_RESOURCE_SPLASH_IDS[SLOT_TOP]);
-	GRect top_in_from_frame = GRect(info[SLOT_TOP].offset_x + info[SLOT_TOP].offset_splash_x, 
-									info[SLOT_TOP].offset_splash_y,
-									SCREEN_WIDTH,
-									info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
-	GRect top_in_to_frame = GRect(info[SLOT_TOP].offset_x, 
-								  info[SLOT_TOP].offset_y, 
-								  SCREEN_WIDTH, 
-								  info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
-	GRect top_out_to_frame = GRect(info[SLOT_TOP].offset_x - SCREEN_WIDTH, 
-								   info[SLOT_TOP].offset_y, 
-								   SCREEN_WIDTH, 
-								   info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
-	slots[SLOT_TOP].layer = bitmap_layer_create(top_in_from_frame);	
-	
-	bitmap_layer_set_bitmap(slots[SLOT_TOP].layer, slots[SLOT_TOP].image);
-	layer_insert_below_sibling(bitmap_layer_get_layer(slots[SLOT_TOP].layer), inverter_layer_get_layer(inverter));
-	
-	//setup top slot animation in
-	slots[SLOT_TOP].animation_in_from_frame = top_in_from_frame;
-	slots[SLOT_TOP].animation_in_to_frame = top_in_to_frame;
-	slots[SLOT_TOP].animation_in = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_TOP].layer),
-																		&slots[SLOT_TOP].animation_in_from_frame, 
-																		&slots[SLOT_TOP].animation_in_to_frame);
-	animation_set_duration((Animation*)slots[SLOT_TOP].animation_in, info[SLOT_TOP].animation_duration_splash);
-	animation_set_curve((Animation*)slots[SLOT_TOP].animation_in, AnimationCurveEaseInOut);
-	animation_set_handlers((Animation*)slots[SLOT_TOP].animation_in,
-						   (AnimationHandlers)
-						   {
-							   .stopped = (AnimationStoppedHandler)slot_splash_animation_in_stopped
-						   }, 
-						   &slots[SLOT_TOP].slot_number);
-	
-	//setup top slot animation out
-	slots[SLOT_TOP].animation_out_from_frame = top_in_to_frame;
-	slots[SLOT_TOP].animation_out_to_frame = top_out_to_frame;
-	slots[SLOT_TOP].animation_out = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_TOP].layer),
-																		 &slots[SLOT_TOP].animation_out_from_frame, 
-																		 &slots[SLOT_TOP].animation_out_to_frame);
-	animation_set_duration((Animation*)slots[SLOT_TOP].animation_out, info[SLOT_TOP].animation_duration_out);
-	animation_set_curve((Animation*)slots[SLOT_TOP].animation_out, AnimationCurveEaseInOut);
-	animation_set_handlers((Animation*)slots[SLOT_TOP].animation_out,
-						   (AnimationHandlers)
-						   {
-							   .stopped = (AnimationStoppedHandler)slot_splash_animation_out_stopped
-						   }, 
-						   &slots[SLOT_TOP].slot_number);
-	
-	slots[SLOT_TOP].state = SLOT_STATE_SPLASH;
-		
-	//load mid slot image
-	slots[SLOT_MID].slot_number = SLOT_MID;
-	slots[SLOT_MID].image = gbitmap_create_with_resource(IMAGE_RESOURCE_SPLASH_IDS[SLOT_MID]);
-	GRect mid_in_from_frame = GRect(info[SLOT_MID].offset_x - info[SLOT_MID].offset_splash_x, 
-									info[SLOT_MID].offset_splash_y,
-									SCREEN_WIDTH,
-									info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);
-	GRect mid_in_to_frame = GRect(info[SLOT_MID].offset_x, 
-								  info[SLOT_MID].offset_y, 
-								  SCREEN_WIDTH, 
-								  info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);	
-	GRect mid_out_to_frame = GRect(info[SLOT_MID].offset_x - SCREEN_WIDTH, 
-								   info[SLOT_MID].offset_y, 
-								   SCREEN_WIDTH, 
-								   info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);
-	slots[SLOT_MID].layer = bitmap_layer_create(mid_in_from_frame);	
-	
-	bitmap_layer_set_bitmap(slots[SLOT_MID].layer, slots[SLOT_MID].image);
-	layer_insert_below_sibling(bitmap_layer_get_layer(slots[SLOT_MID].layer), inverter_layer_get_layer(inverter));
-	
-	//setup mid slot animation in
-	slots[SLOT_MID].animation_in_from_frame = mid_in_from_frame;
-	slots[SLOT_MID].animation_in_to_frame = mid_in_to_frame;
-	slots[SLOT_MID].animation_in = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_MID].layer),
-																		&slots[SLOT_MID].animation_in_from_frame, 
-																		&slots[SLOT_MID].animation_in_to_frame);
-	animation_set_duration((Animation*)slots[SLOT_MID].animation_in, info[SLOT_MID].animation_duration_splash);
-	animation_set_curve((Animation*)slots[SLOT_MID].animation_in, AnimationCurveEaseInOut);
-	animation_set_handlers((Animation*)slots[SLOT_MID].animation_in,
-						   (AnimationHandlers)
-						   {
-							   .stopped = (AnimationStoppedHandler)slot_splash_animation_in_stopped
-						   }, 
-						   &slots[SLOT_MID].slot_number);
-	
-	//setup mid slot animation out
-	slots[SLOT_MID].animation_out_from_frame = mid_in_to_frame;
-	slots[SLOT_MID].animation_out_to_frame = mid_out_to_frame;
-	slots[SLOT_MID].animation_out = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_MID].layer),
-																		 &slots[SLOT_MID].animation_out_from_frame, 
-																		 &slots[SLOT_MID].animation_out_to_frame);
-	animation_set_duration((Animation*)slots[SLOT_MID].animation_out, info[SLOT_MID].animation_duration_out);
-	animation_set_curve((Animation*)slots[SLOT_MID].animation_out, AnimationCurveEaseInOut);
-	animation_set_handlers((Animation*)slots[SLOT_MID].animation_out,
-						   (AnimationHandlers)
-						   {
-							   .stopped = (AnimationStoppedHandler)slot_splash_animation_out_stopped
-						   }, 
-						   &slots[SLOT_MID].slot_number);
-	
-	slots[SLOT_MID].state = SLOT_STATE_SPLASH;
-	
-	//load bot slot image
-	slots[SLOT_BOT].slot_number = SLOT_BOT;
-	slots[SLOT_BOT].image = gbitmap_create_with_resource(IMAGE_RESOURCE_SPLASH_IDS[SLOT_BOT]);
-	GRect bot_in_from_frame = GRect(info[SLOT_BOT].offset_x + info[SLOT_BOT].offset_splash_x, 
-									info[SLOT_BOT].offset_splash_y,
-									SCREEN_WIDTH,
-									SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
-	GRect bot_in_to_frame = GRect(info[SLOT_BOT].offset_x, 
-								  info[SLOT_BOT].offset_y, 
-								  SCREEN_WIDTH, 
-								  SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
-	GRect bot_out_to_frame = GRect(info[SLOT_BOT].offset_x - SCREEN_WIDTH, 
-								   info[SLOT_BOT].offset_y, 
-								   SCREEN_WIDTH, 
-								   SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
-	slots[SLOT_BOT].layer = bitmap_layer_create(bot_in_from_frame);	
-	
-	bitmap_layer_set_bitmap(slots[SLOT_BOT].layer, slots[SLOT_BOT].image);
-	layer_insert_below_sibling(bitmap_layer_get_layer(slots[SLOT_BOT].layer), inverter_layer_get_layer(inverter));
-	
-	//setup bot slot animation in
-	slots[SLOT_BOT].animation_in_from_frame = bot_in_from_frame;
-	slots[SLOT_BOT].animation_in_to_frame = bot_in_to_frame;
-	slots[SLOT_BOT].animation_in = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_BOT].layer),
-																		&slots[SLOT_BOT].animation_in_from_frame, 
-																		&slots[SLOT_BOT].animation_in_to_frame);
-	
-	animation_set_duration((Animation*)slots[SLOT_BOT].animation_in, info[SLOT_BOT].animation_duration_splash);
-	animation_set_curve((Animation*)slots[SLOT_BOT].animation_in, AnimationCurveEaseInOut);
-	animation_set_handlers((Animation*)slots[SLOT_BOT].animation_in,
-						   (AnimationHandlers)
-						   {
-							   .stopped = (AnimationStoppedHandler)slot_splash_animation_in_stopped
-						   }, 
-						   &slots[SLOT_BOT].slot_number);
-	
-	//setup bot slot animation out
-	slots[SLOT_BOT].animation_out_from_frame = bot_in_to_frame;
-	slots[SLOT_BOT].animation_out_to_frame = bot_out_to_frame;
-	slots[SLOT_BOT].animation_out = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[SLOT_BOT].layer),
-																		 &slots[SLOT_BOT].animation_out_from_frame, 
-																		 &slots[SLOT_BOT].animation_out_to_frame);
-	
-	animation_set_duration((Animation*)slots[SLOT_BOT].animation_out, info[SLOT_BOT].animation_duration_out);
-	animation_set_curve((Animation*)slots[SLOT_BOT].animation_out, AnimationCurveEaseInOut);
-	animation_set_handlers((Animation*)slots[SLOT_BOT].animation_out,
-						   (AnimationHandlers)
-						   {
-							   .stopped = (AnimationStoppedHandler)slot_splash_animation_out_stopped
-						   }, 
-						   &slots[SLOT_BOT].slot_number);
-	
-	slots[SLOT_BOT].state = SLOT_STATE_SPLASH;
+	if(slot_number >= SLOTS_COUNT)
+	{
+		#ifdef ENABLE_LOGGING
+		char *error1 = "splash_animate: invalid value; slot_number=XXX";
+		snprintf(error1, strlen(error1), "splash_animate: invalid value; slot_number=%d", slot_number);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, error1);
+		#endif
+
+		return;
+	}
+
+	if(slots[slot_number].state != SLOT_STATE_SPLASH) 
+	{ 
+		#ifdef ENABLE_LOGGING
+		char *error2 = "splash_animate: invalid value; state=XXX";
+		snprintf(error2, strlen(error2), "splash_animate: invalid value; state=%d", slots[slot_number].state);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, error2);
+		#endif
+
+		return; 
+	}	
+
+	animation_schedule((Animation*)slots[slot_number].animation);
 	
 	#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_init: done");
+	char *output = "splash_animate: XXX";
+	snprintf(output, strlen(output), "splash_animate: %d", slot_number);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	#endif
+}
+
+void slot_splash_animation_in_stopped(Animation *animation, bool finished, void *data)
+{
+	(void)animation;
+	int slot_number = *(int*)data;
+	
+	#ifdef ENABLE_LOGGING
+	char *output = "slot_splash_animation_in_stopped: XXX";
+	snprintf(output, strlen(output), "slot_splash_animation_in_stopped: %d", slot_number);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	#endif
+
+	splash_animation_out_init(slot_number);
+	splash_animate(slot_number);
+}
+
+void splash_animation_in_init(int slot_number) 
+{
+	if(slot_number >= SLOTS_COUNT)
+	{
+		#ifdef ENABLE_LOGGING
+		char *error = "splash_animation_in_init: invalid value; slot_number=XXX";
+		snprintf(error, strlen(error), "splash_animation_in_init: invalid value; slot_number=%d", slot_number);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, error);
+		#endif
+
+		return;
+	}
+
+	slots[slot_number].slot_number = slot_number;
+	slots[slot_number].state = SLOT_STATE_SPLASH;
+	slots[slot_number].image = gbitmap_create_with_resource(IMAGE_RESOURCE_SPLASH_IDS[slot_number]);
+	
+	GRect from_frame;
+	GRect to_frame;
+	
+	if(slot_number == SLOT_TOP)
+	{
+		from_frame = GRect(info[SLOT_TOP].offset_x + info[SLOT_TOP].offset_splash_x, info[SLOT_TOP].offset_splash_y, SCREEN_WIDTH, info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
+		to_frame = GRect(info[SLOT_TOP].offset_x, info[SLOT_TOP].offset_y, SCREEN_WIDTH, info[SLOT_MID].offset_y - info[SLOT_TOP].offset_y);
+	}
+	else if(slot_number == SLOT_MID)
+	{
+		from_frame = GRect(info[SLOT_MID].offset_x - info[SLOT_MID].offset_splash_x, info[SLOT_MID].offset_splash_y, SCREEN_WIDTH, info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);
+		to_frame = GRect(info[SLOT_MID].offset_x, info[SLOT_MID].offset_y, SCREEN_WIDTH, info[SLOT_BOT].offset_y - info[SLOT_MID].offset_y);	
+	}
+	else if(slot_number == SLOT_BOT)
+	{
+		from_frame = GRect(info[SLOT_BOT].offset_x + info[SLOT_BOT].offset_splash_x, info[SLOT_BOT].offset_splash_y, SCREEN_WIDTH, SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
+		to_frame = GRect(info[SLOT_BOT].offset_x, info[SLOT_BOT].offset_y, SCREEN_WIDTH, SCREEN_HEIGHT - info[SLOT_BOT].offset_y);
+	}
+
+	slots[slot_number].layer = bitmap_layer_create(from_frame);	
+	
+	bitmap_layer_set_bitmap(slots[slot_number].layer, slots[slot_number].image);
+	layer_insert_below_sibling(bitmap_layer_get_layer(slots[slot_number].layer), inverter_layer_get_layer(inverter));
+
+	slots[slot_number].animation_from_frame = from_frame;
+	slots[slot_number].animation_to_frame = to_frame;
+	slots[slot_number].animation = property_animation_create_layer_frame(bitmap_layer_get_layer(slots[slot_number].layer), &slots[slot_number].animation_from_frame, &slots[slot_number].animation_to_frame);
+	animation_set_duration((Animation*)slots[slot_number].animation, info[slot_number].animation_duration_splash);
+	animation_set_curve((Animation*)slots[slot_number].animation, AnimationCurveEaseInOut);
+	animation_set_handlers((Animation*)slots[slot_number].animation,
+						   (AnimationHandlers)
+						   { .stopped = (AnimationStoppedHandler)slot_splash_animation_in_stopped }, 
+						   &slots[slot_number].slot_number);
+
+	#ifdef ENABLE_LOGGING
+	char *output = "splash_animation_in_init: XXX";
+	snprintf(output, strlen(output), "splash_animation_in_init: %d", slot_number);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 	#endif
 }
 
@@ -556,10 +517,10 @@ void inverter_init()
 	layer_add_child(window_get_root_layer(window), inverter_layer_get_layer(inverter));
 	
 	#ifdef ENABLE_LOGGING
-		if(invert_mode == INVERT_ON_AM) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ON_AM");
-		else if(invert_mode == INVERT_ALWAYS) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ALWAYS");
-		else if(invert_mode == INVERT_NEVER) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_NEVER");
-		else APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: invalid invert_mode; default=INVERT_NEVER");
+	if(invert_mode == INVERT_ON_AM) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ON_AM");
+	else if(invert_mode == INVERT_ALWAYS) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ALWAYS");
+	else if(invert_mode == INVERT_NEVER) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_NEVER");
+	else APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: invalid invert_mode; default=INVERT_NEVER");
 	#endif
 }
 
@@ -569,16 +530,16 @@ void inverter_deinit()
 	inverter_layer_destroy(inverter);
 							 
 	#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_deinit: done");
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_deinit: done");
 	#endif
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
 {
 	#ifdef ENABLE_LOGGING
-		char *output = "handle_tick: MM/dd/yyyy hh:mm:ss";
-		strftime(output, strlen(output), "handle_tick: %D %T", tick_time);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
+	char *output = "handle_tick: MM/dd/yyyy hh:mm:ss";
+	strftime(output, strlen(output), "handle_tick: %D %T", tick_time);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 	#endif
 	
 	//display_time(tick_time);
@@ -591,9 +552,9 @@ void handle_init()
 	window_set_background_color(window, GColorBlack);
 
 	#ifndef DEBUG
-		tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
+	tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
 		#ifdef ENABLE_LOGGING
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe: MINUTE_UNIT");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe: MINUTE_UNIT");
 		#endif
 	#else
 		tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
@@ -605,10 +566,21 @@ void handle_init()
 	//btmonitor_init(true);
 	
 	inverter_init();
-	splash_init();
+
+	time_t t = time(NULL);
+	struct tm *local = localtime(&t);
+	determine_invert_status(local);
 	
+	splash_animation_in_init(SLOT_TOP);
+	splash_animation_in_init(SLOT_MID);
+	splash_animation_in_init(SLOT_BOT);
+	
+	splash_animate(SLOT_TOP);
+	splash_animate(SLOT_MID);
+	splash_animate(SLOT_BOT);
+
 	#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_init: done");
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_init: done");
 	#endif
 }
 
@@ -629,14 +601,14 @@ void handle_deinit()
 	window_destroy(window);
 	
 	#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit: done");
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit: done");
 	#endif
 }
 
 int main(void) 
 {
 	#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "main: start");
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "main: start");
 	#endif
 		
 	handle_init();

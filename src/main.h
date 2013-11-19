@@ -23,13 +23,9 @@ typedef struct
 	GBitmap *image;
 	BitmapLayer *layer;
 	
-	PropertyAnimation *animation_in;
-	GRect animation_in_from_frame;
-	GRect animation_in_to_frame;
-	
-	PropertyAnimation *animation_out;
-	GRect animation_out_from_frame;
-	GRect animation_out_to_frame;
+	PropertyAnimation *animation;
+	GRect animation_from_frame;
+	GRect animation_to_frame;
 	
 	int state;
 	int slot_number;
@@ -70,7 +66,7 @@ SlotInfo info[SLOTS_COUNT] =
 		0, //offset_x
 		30, //offset_y
 		20, //offset_splash_x
-		0 //offset_splash_y
+		30 //offset_splash_y
 	},
 	{
 		200, //animation_duration_in
@@ -81,7 +77,7 @@ SlotInfo info[SLOTS_COUNT] =
 		0, //offset_x
 		104, //offset_y
 		0, //offset_splash_x
-		0 //offset_splash_y
+		104 //offset_splash_y
 	}
 };
 
