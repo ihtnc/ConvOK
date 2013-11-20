@@ -154,10 +154,12 @@ int state_determine_value(int slot_number, struct tm *time)
 
 void slot_deinit(int slot_number)
 {
+	animation_destroy((Animation*)slots[slot_number].animation);
 	property_animation_destroy(slots[slot_number].animation);
 	
 	layer_remove_from_parent(bitmap_layer_get_layer(slots[slot_number].layer));
-	bitmap_layer_destroy(slots[slot_number].layer);
+
+	bitmap_layer_destroy(slots[slot_number].layer);	
 	gbitmap_destroy(slots[slot_number].image);
 	
 	#ifdef ENABLE_LOGGING
@@ -175,17 +177,6 @@ void slot_animate(int slot_number)
 		char *error1 = "slot_animate: invalid value; slot_number=XXX";
 		snprintf(error1, strlen(error1), "slot_animate: invalid value; slot_number=%d", slot_number);
 		APP_LOG(APP_LOG_LEVEL_DEBUG, error1);
-		#endif
-
-		return;
-	}
-
-	if((Animation*)slots[slot_number].animation == NULL)
-	{
-		#ifdef ENABLE_LOGGING
-		char *error3 = "slot_animate: no animation; slot_number=XXX";
-		snprintf(error3, strlen(error3), "slot_animate: no animation; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error3);
 		#endif
 
 		return;
@@ -210,9 +201,14 @@ void slot_animation_out_stopped(Animation *animation, bool finished, void *data)
 	snprintf(output, strlen(output), "slot_animation_out_stopped: slot_number=%d", slot_number);
 	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 	#endif
-		
+	
 	slot_deinit(slot_number);
-	main_animation_in_init(slot_number);
+
+	time_t t = time(NULL);
+        struct tm *local = localtime(&t);
+	int state = state_determine_value(slot_number, local);	
+	main_animation_in_init(slot_number, state);
+
 	slot_animate(slot_number);
 }
 
@@ -229,6 +225,7 @@ void slot_animation_out_init(int slot_number)
 		return;
 	}
 
+	animation_destroy((Animation*)slots[slot_number].animation);
 	property_animation_destroy(slots[slot_number].animation);
 
 	GRect from_frame;
@@ -282,7 +279,7 @@ void main_animation_in_stopped(Animation *animation, bool finished, void *data)
 	slot_animation_out_init(slot_number);
 }
 
-void main_animation_in_init(int slot_number)
+void main_animation_in_init(int slot_number, int state)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
@@ -292,32 +289,6 @@ void main_animation_in_init(int slot_number)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, error1);
 		#endif
 
-		return;
-	}
-	
-	time_t t = time(NULL);
-	struct tm *local = localtime(&t);
-	int state = state_determine_value(slot_number, local);
-	
-	if(state == SLOT_STATE_ERROR)
-	{
-		#ifdef ENABLE_LOGGING
-		char *error2 = "main_animation_in_init: invalid state; slot_number=XXX";
-		snprintf(error2, strlen(error2), "main_animation_in_init: invalid state; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error2);
-		#endif
-			
-		return;
-	}
-	
-	if(slots[slot_number].state == state)
-	{
-		#ifdef ENABLE_LOGGING
-		char *info = "main_animation_in_init: state unchanged; slot_number=XXX";
-		snprintf(info, strlen(info), "main_animation_in_init: state unchanged; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, info);
-		#endif
-			
 		return;
 	}
 	
@@ -381,7 +352,7 @@ void splash_animation_in_stopped(Animation *animation, bool finished, void *data
 	slot_animate(slot_number);
 }
 
-void splash_animation_in_init(int slot_number) 
+void splash_animation_in_init(int slot_number, int state) 
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
@@ -395,7 +366,7 @@ void splash_animation_in_init(int slot_number)
 	}
 
 	slots[slot_number].slot_number = slot_number;
-	slots[slot_number].state = SLOT_STATE_SPLASH;
+	slots[slot_number].state = state;
 	slots[slot_number].image = gbitmap_create_with_resource(resource_id_get_from_state(slot_number));
 	
 	GRect from_frame;
@@ -472,22 +443,67 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	#endif
 
 	if(slots[SLOT_TOP].state == SLOT_STATE_SPLASH
-	  || slots[SLOT_MID].state == SLOT_STATE_SPLASH
-	  || slots[SLOT_BOT].state == SLOT_STATE_SPLASH)
+		|| slots[SLOT_MID].state == SLOT_STATE_SPLASH
+		|| slots[SLOT_BOT].state == SLOT_STATE_SPLASH)
 	{
 		#ifdef ENABLE_LOGGING
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: ticked while showing splash");
 		#endif
 		return;
-	}
-		
-	slot_animation_out_init(SLOT_TOP);
-	slot_animation_out_init(SLOT_MID);
-	slot_animation_out_init(SLOT_BOT);
+	}	
 	
-	slot_animate(SLOT_TOP);
-	slot_animate(SLOT_MID);
-	slot_animate(SLOT_BOT);
+	determine_invert_status(tick_time);
+
+	int top_state = state_determine_value(SLOT_TOP, tick_time);
+	if(slots[SLOT_TOP].state != top_state)
+	{
+		slots[SLOT_TOP].state = top_state;
+		slot_animate(SLOT_TOP);
+		
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: animating top");
+		#endif
+	}
+	else
+	{
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: not animating top");
+		#endif
+	}
+
+	int mid_state = state_determine_value(SLOT_MID, tick_time);
+	if(slots[SLOT_MID].state != mid_state)
+	{
+		slots[SLOT_MID].state = mid_state;
+		slot_animate(SLOT_MID);
+
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: animating mid");
+		#endif
+	}
+	else
+	{
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: not animating mid");
+		#endif
+	}
+
+	int bot_state = state_determine_value(SLOT_BOT, tick_time);
+	if(slots[SLOT_BOT].state != bot_state)
+	{
+		slots[SLOT_BOT].state = bot_state;
+		slot_animate(SLOT_BOT);
+
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: animating bot");
+		#endif
+	}
+	else
+	{
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: not animating bot");
+		#endif
+	}
 }
 
 void handle_deinit() 
@@ -515,7 +531,7 @@ void handle_init()
 	window_set_background_color(window, GColorBlack);
 
 	#ifndef DEBUG
-	tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
+		tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
 		#ifdef ENABLE_LOGGING
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe: MINUTE_UNIT");
 		#endif
@@ -533,9 +549,9 @@ void handle_init()
 	struct tm *local = localtime(&t);
 	determine_invert_status(local);
 	
-	splash_animation_in_init(SLOT_TOP);
-	splash_animation_in_init(SLOT_MID);
-	splash_animation_in_init(SLOT_BOT);
+	splash_animation_in_init(SLOT_TOP, SLOT_STATE_SPLASH);
+	splash_animation_in_init(SLOT_MID, SLOT_STATE_SPLASH);
+	splash_animation_in_init(SLOT_BOT, SLOT_STATE_SPLASH);
 	
 	slot_animate(SLOT_TOP);
 	slot_animate(SLOT_MID);

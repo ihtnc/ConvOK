@@ -122,9 +122,9 @@ void inverter_init();
 void determine_invert_status(struct tm *tick_time);
 void inverter_deinit();
 
-void main_animation_in_init(int slot_number);
+void main_animation_in_init(int slot_number, int state);
 void main_animation_in_stopped(Animation *animation, bool finished, void *data);
-void splash_animation_in_init(int slot_number);
+void splash_animation_in_init(int slot_number, int state);
 void splash_animation_in_stopped(Animation *animation, bool finished, void *data);
 
 void slot_animation_out_init(int slot_number);
