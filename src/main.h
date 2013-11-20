@@ -1,15 +1,18 @@
 #include "pebble.h"
 	
 #define SLOTS_COUNT 3
-	
-#define SLOT_STATE_NORMAL 0
+
+//other state values are from 0 onwards
 #define SLOT_STATE_EMPTY -1
 #define SLOT_STATE_SPLASH -2
-	
+#define SLOT_STATE_ERROR -3
+
 #define SLOT_TOP 0
 #define SLOT_MID 1
 #define SLOT_BOT  2
 
+#define RESOURCE_ID_ERROR -1
+	
 #define SCREEN_HEIGHT 168
 #define SCREEN_WIDTH 144
 	
@@ -111,3 +114,24 @@ const int IMAGE_RESOURCE_BOT_IDS[4] =
  	 RESOURCE_ID_IMAGE_BOT_00, RESOURCE_ID_IMAGE_BOT_15,
  	 RESOURCE_ID_IMAGE_BOT_30, RESOURCE_ID_IMAGE_BOT_45
 };
+
+void handle_init();
+void handle_deinit() ;
+
+void inverter_init();
+void determine_invert_status(struct tm *tick_time);
+void inverter_deinit();
+
+void main_animation_in_init(int slot_number);
+void main_animation_in_stopped(Animation *animation, bool finished, void *data);
+void splash_animation_in_init(int slot_number);
+void splash_animation_in_stopped(Animation *animation, bool finished, void *data);
+
+void slot_animation_out_init(int slot_number);
+void slot_animate(int slot_number);
+void slot_animation_out_stopped(Animation *animation, bool finished, void *data);
+void slot_deinit(int slot_number);
+
+int resource_id_get_from_state(int slot_number);
+int state_determine_value(int slot_number, struct tm *time);
+
