@@ -15,115 +15,9 @@
     "resources": {
         "media": [
             {
-                "menuIcon": true,
                 "type": "png",
-                "name": "IMAGE_MENU_ICON",
-                "file": "images/menu_icon_convok_watch.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_BOT_SPLASH",
-                "file": "images/bot_splash.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_SPLASH",
-                "file": "images/mid_splash.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_TOP_SPLASH",
-                "file": "images/top_splash.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_TOP_EXACT",
-                "file": "images/top_exact.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_TOP_BEFORE",
-                "file": "images/top_before.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_TOP_ALMOST",
-                "file": "images/top_almost.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_TOP_AFTER",
-                "file": "images/top_after.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_12",
-                "file": "images/mid_12.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_11",
-                "file": "images/mid_11.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_10",
-                "file": "images/mid_10.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_09",
-                "file": "images/mid_9.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_08",
-                "file": "images/mid_8.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_07",
-                "file": "images/mid_7.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_06",
-                "file": "images/mid_6.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_05",
-                "file": "images/mid_5.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_04",
-                "file": "images/mid_4.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_MID_03",
-                "file": "images/mid_3.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_BOT_45",
-                "file": "images/bot_45.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_BOT_30",
-                "file": "images/bot_30.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_BOT_15",
-                "file": "images/bot_15.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_BOT_00",
-                "file": "images/bot_00.png"
+                "name": "IMAGE_MID_02",
+                "file": "images/mid_2.png"
             },
             {
                 "type": "png",
@@ -132,8 +26,114 @@
             },
             {
                 "type": "png",
-                "name": "IMAGE_MID_02",
-                "file": "images/mid_2.png"
+                "name": "IMAGE_BOT_00",
+                "file": "images/bot_00.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_BOT_15",
+                "file": "images/bot_15.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_BOT_30",
+                "file": "images/bot_30.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_BOT_45",
+                "file": "images/bot_45.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_03",
+                "file": "images/mid_3.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_04",
+                "file": "images/mid_4.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_05",
+                "file": "images/mid_5.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_06",
+                "file": "images/mid_6.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_07",
+                "file": "images/mid_7.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_08",
+                "file": "images/mid_8.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_09",
+                "file": "images/mid_9.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_10",
+                "file": "images/mid_10.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_11",
+                "file": "images/mid_11.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_12",
+                "file": "images/mid_12.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_TOP_AFTER",
+                "file": "images/top_after.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_TOP_ALMOST",
+                "file": "images/top_almost.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_TOP_BEFORE",
+                "file": "images/top_before.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_TOP_EXACT",
+                "file": "images/top_exact.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_TOP_SPLASH",
+                "file": "images/top_splash.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_MID_SPLASH",
+                "file": "images/mid_splash.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_BOT_SPLASH",
+                "file": "images/bot_splash.png"
+            },
+            {
+                "menuIcon": true,
+                "type": "png",
+                "name": "IMAGE_MENU_ICON",
+                "file": "images/menu_icon_convok_watch.png"
             }
         ]
     }

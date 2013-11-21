@@ -24,7 +24,7 @@
   X:27-X:29 = Almost X thirty           X:57-X:59 = Almost X+1 o'Clock
 */
 	
-void determine_invert_status(struct tm *tick_time)
+static void determine_invert_status(struct tm *tick_time)
 {
 	bool invert;
 	
@@ -49,7 +49,7 @@ void determine_invert_status(struct tm *tick_time)
 	#endif
 }
 
-int resource_id_get_from_state(int slot_number)
+static int resource_id_get_from_state(int slot_number)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
@@ -78,7 +78,7 @@ int resource_id_get_from_state(int slot_number)
 	return IMAGE_RESOURCE_SPLASH_IDS[slot_number];
 }
 
-int state_determine_value(int slot_number, struct tm *time) 
+static int state_determine_value(int slot_number, struct tm *time) 
 {
 	#ifndef DEBUG
 		int hour_value = time->tm_hour % 12;
@@ -152,15 +152,19 @@ int state_determine_value(int slot_number, struct tm *time)
 	return state_value;
 }
 
-void slot_deinit(int slot_number)
+static void slot_deinit(int slot_number)
 {
 	animation_destroy((Animation*)slots[slot_number].animation);
 	property_animation_destroy(slots[slot_number].animation);
+	free(slots[slot_number].animation);
 	
 	layer_remove_from_parent(bitmap_layer_get_layer(slots[slot_number].layer));
 
-	bitmap_layer_destroy(slots[slot_number].layer);	
+	bitmap_layer_destroy(slots[slot_number].layer);
+	free(slots[slot_number].layer);
+	
 	gbitmap_destroy(slots[slot_number].image);
+	free(slots[slot_number].image);
 	
 	#ifdef ENABLE_LOGGING
 	char *output = "slot_deinit: slot_number=XXX";
@@ -169,7 +173,7 @@ void slot_deinit(int slot_number)
 	#endif
 }
 
-void slot_animate(int slot_number)
+static void slot_animate(int slot_number)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
@@ -191,8 +195,17 @@ void slot_animate(int slot_number)
 	#endif
 }
 
-void slot_animation_out_stopped(Animation *animation, bool finished, void *data)
+static void slot_animation_out_stopped(Animation *animation, bool finished, void *data)
 {
+	if(finished == false)
+	{
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "slot_animation_out_stopped: animation interrupted");
+		#endif
+		
+		return;
+	}
+	
 	(void)animation;
 	int slot_number = *(int*)data;
 	
@@ -212,7 +225,7 @@ void slot_animation_out_stopped(Animation *animation, bool finished, void *data)
 	slot_animate(slot_number);
 }
 
-void slot_animation_out_init(int slot_number)
+static void slot_animation_out_init(int slot_number)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
@@ -227,7 +240,8 @@ void slot_animation_out_init(int slot_number)
 
 	animation_destroy((Animation*)slots[slot_number].animation);
 	property_animation_destroy(slots[slot_number].animation);
-
+	free(slots[slot_number].animation);
+	
 	GRect from_frame;
 	GRect to_frame;
 
@@ -265,8 +279,17 @@ void slot_animation_out_init(int slot_number)
 	#endif
 }
 
-void main_animation_in_stopped(Animation *animation, bool finished, void *data)
+static void main_animation_in_stopped(Animation *animation, bool finished, void *data)
 {
+	if(finished == false)
+	{
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "main_animation_in_stopped: animation interrupted");
+		#endif
+		
+		return;
+	}
+	
 	(void)animation;
 	int slot_number = *(int*)data;
 	
@@ -279,7 +302,7 @@ void main_animation_in_stopped(Animation *animation, bool finished, void *data)
 	slot_animation_out_init(slot_number);
 }
 
-void main_animation_in_init(int slot_number, int state)
+static void main_animation_in_init(int slot_number, int state)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
@@ -337,8 +360,17 @@ void main_animation_in_init(int slot_number, int state)
 	#endif
 }
 
-void splash_animation_in_stopped(Animation *animation, bool finished, void *data)
+static void splash_animation_in_stopped(Animation *animation, bool finished, void *data)
 {
+	if(finished == false)
+	{
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "splash_animation_in_stopped: animation interrupted");
+		#endif
+		
+		return;
+	}
+	
 	(void)animation;
 	int slot_number = *(int*)data;
 	
@@ -352,7 +384,7 @@ void splash_animation_in_stopped(Animation *animation, bool finished, void *data
 	slot_animate(slot_number);
 }
 
-void splash_animation_in_init(int slot_number, int state) 
+static void splash_animation_in_init(int slot_number, int state) 
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
@@ -410,19 +442,20 @@ void splash_animation_in_init(int slot_number, int state)
 	#endif
 }
 
-void inverter_deinit()
+static void inverter_deinit()
 {
 	layer_remove_from_parent(inverter_layer_get_layer(inverter));
 	inverter_layer_destroy(inverter);
-							 
+	free(inverter);
+		
 	#ifdef ENABLE_LOGGING
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_deinit: done");
 	#endif
 }
 
-void inverter_init()
+static void inverter_init(int mode)
 {
-	invert_mode = INVERT_ON_AM;
+	invert_mode = mode;
 	inverter = inverter_layer_create(GRect(0, 0, SCREEN_WIDTH, 0));
 	layer_add_child(window_get_root_layer(window), inverter_layer_get_layer(inverter));
 	
@@ -506,11 +539,12 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	}
 }
 
-void handle_deinit() 
+static void handle_deinit() 
 {
-	//btmonitor_deinit();
+	btmonitor_deinit();
 	inverter_deinit();
 
+	animation_unschedule_all();
 	tick_timer_service_unsubscribe();
 	
 	slot_deinit(SLOT_TOP);
@@ -524,7 +558,7 @@ void handle_deinit()
 	#endif
 }
 
-void handle_init()
+static void handle_init()
 {
 	window = window_create();
 	window_stack_push(window, true);	
@@ -542,8 +576,8 @@ void handle_init()
 		#endif
 	#endif
 	
-	//btmonitor_init(true);
-	inverter_init();
+	btmonitor_init(true);
+	inverter_init(INVERT_ON_AM);
 
 	time_t t = time(NULL);
 	struct tm *local = localtime(&t);
