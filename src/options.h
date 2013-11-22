@@ -1,3 +1,5 @@
+#include "pebble.h"
+
 //Debug mode treats the watch's minute value as the hour value and the watch's second value as the minute value.
 //This is to speed up the transition of the animations
 //#define DEBUG
@@ -10,11 +12,14 @@
 #define INVERT_ON_AM 1
 #define INVERT_ALWAYS 2
 
-int invert_mode;
-bool bt_notification;
-
-static enum 
+enum 
 {
-	CONFIG_KEY_INVERTMODE = 20,
-	CONFIG_KEY_BTNOTIFICATION = 21
+	CONFIG_KEY_INVERTMODE = 0,
+	CONFIG_KEY_BTNOTIFICATION = 1
 };
+
+int get_invert_mode_value(void);
+void set_invert_mode_value(int value);
+
+bool get_bt_notification_value(void);
+void set_bt_notification_value(bool value);

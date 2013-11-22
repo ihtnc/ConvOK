@@ -1,3 +1,4 @@
+/*
 #include "gesturecfg.h"
 #include "options.h"
 
@@ -35,7 +36,7 @@ void gesturecfg_set_menu_items(int count, ...)
 
 void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data)
 {
-	/*
+	
 	switch (cell_index->row)
 	{
     // This is the menu item with the cycling icon
@@ -46,7 +47,7 @@ void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *da
       layer_mark_dirty(menu_layer_get_layer(menu_layer));
       break;
 	}
-*/
+
 }
 
 static void window_load(Window *window) 
@@ -89,3 +90,4 @@ void gesturecfg_init()
 	
 	//window_stack_push(window, true);
 }
+*/

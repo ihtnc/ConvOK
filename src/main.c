@@ -24,16 +24,19 @@
   X:22-X:26 = A bit before X thirty     X:52-X:56 = A bit before X+1 o'Clock
   X:27-X:29 = Almost X thirty           X:57-X:59 = Almost X+1 o'Clock
 */
-	
+
+static void main_animation_in_init(int slot_number, int state);
+
 static void determine_invert_status(struct tm *tick_time)
 {
 	bool invert;
-	
-	if(invert_mode == INVERT_ON_AM)
+	bool mode = get_invert_mode_value();
+
+	if(mode == INVERT_ON_AM)
 	{
 		invert = (tick_time->tm_hour < 12);
 	}
-	else if(invert_mode == INVERT_ALWAYS)
+	else if(mode == INVERT_ALWAYS)
 	{
 		invert = true;
 	}
@@ -456,14 +459,13 @@ static void inverter_deinit()
 
 static void inverter_init(int mode)
 {
-	invert_mode = mode;
 	inverter = inverter_layer_create(GRect(0, 0, SCREEN_WIDTH, 0));
 	layer_add_child(window_get_root_layer(window), inverter_layer_get_layer(inverter));
 	
 	#ifdef ENABLE_LOGGING
-	if(invert_mode == INVERT_ON_AM) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ON_AM");
-	else if(invert_mode == INVERT_ALWAYS) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ALWAYS");
-	else if(invert_mode == INVERT_NEVER) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_NEVER");
+	if(mode == INVERT_ON_AM) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ON_AM");
+	else if(mode == INVERT_ALWAYS) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ALWAYS");
+	else if(mode == INVERT_NEVER) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_NEVER");
 	else APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: invalid invert_mode; default=INVERT_NEVER");
 	#endif
 }
@@ -542,6 +544,15 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 
 static void handle_deinit() 
 {
+	window_destroy(window);
+	
+	#ifdef ENABLE_LOGGING
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit: done");
+	#endif
+}
+
+static void window_unload(Window *window) 
+{
 	thincfg_deinit();
 	btmonitor_deinit();
 	inverter_deinit();
@@ -553,19 +564,13 @@ static void handle_deinit()
 	slot_deinit(SLOT_MID);
 	slot_deinit(SLOT_BOT);
 	
-	window_destroy(window);
-	
 	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit: done");
+	APP_LOG(APP_LOG_LEVEL_DEBUG, " window_unload: done");
 	#endif
 }
 
-static void handle_init()
+static void window_load(Window *window) 
 {
-	window = window_create();
-	window_stack_push(window, true);	
-	window_set_background_color(window, GColorBlack);
-
 	#ifndef DEBUG
 		tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
 		#ifdef ENABLE_LOGGING
@@ -579,8 +584,8 @@ static void handle_init()
 	#endif
 	
 	thincfg_init();
-	btmonitor_init(bt_notification);
-	inverter_init(invert_mode);
+	btmonitor_init(get_bt_notification_value());
+	inverter_init(get_invert_mode_value());
 
 	time_t t = time(NULL);
 	struct tm *local = localtime(&t);
@@ -593,6 +598,23 @@ static void handle_init()
 	slot_animate(SLOT_TOP);
 	slot_animate(SLOT_MID);
 	slot_animate(SLOT_BOT);
+
+	#ifdef ENABLE_LOGGING
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "window_load: done");
+	#endif
+}
+
+static void handle_init()
+{
+	window = window_create();
+	window_set_window_handlers(window, 
+							   (WindowHandlers)
+							   {
+								   .load = window_load,
+								   .unload = window_unload,
+							   });
+	window_set_background_color(window, GColorBlack);
+	window_stack_push(window, true);
 
 	#ifdef ENABLE_LOGGING
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_init: done");

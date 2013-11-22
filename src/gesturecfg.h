@@ -1,3 +1,4 @@
+/*
 #ifndef GESTURECFG
 #define GESTURECFG
 
@@ -21,3 +22,4 @@ void gesturecfg_set_valid_values(int menu_item_index, int count, ...);
 void gesturecfg_deinit();
 
 #endif
+*/
