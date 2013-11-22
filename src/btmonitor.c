@@ -128,6 +128,15 @@ static void bluetooth_connection_callback(bool connected)
 	}
 }
 
+void btmonitor_unsubscribe()
+{
+	free(btcallbacks);
+	
+	#ifdef ENABLE_LOGGING
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "btmonitor_unsubscribe: done");
+	#endif
+}
+
 void btmonitor_subscribe(BTMonitorCallbacks callbacks)
 {
 	btcallbacks = callbacks;

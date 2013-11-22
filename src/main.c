@@ -1,5 +1,6 @@
 #include "main.h"
 #include "btmonitor.h"
+#include "thincfg.h"
 #include "options.h"
 
 /*
@@ -541,6 +542,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 
 static void handle_deinit() 
 {
+	thincfg_deinit();
 	btmonitor_deinit();
 	inverter_deinit();
 
@@ -576,8 +578,9 @@ static void handle_init()
 		#endif
 	#endif
 	
-	btmonitor_init(true);
-	inverter_init(INVERT_ON_AM);
+	thincfg_init();
+	btmonitor_init(bt_notification);
+	inverter_init(invert_mode);
 
 	time_t t = time(NULL);
 	struct tm *local = localtime(&t);

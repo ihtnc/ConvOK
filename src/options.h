@@ -3,11 +3,18 @@
 //#define DEBUG
 //#define ENABLE_LOGGING
 
-//#define ANDROID
-
 //If INVERT_MODE is INVERT_ALWAYS, then the color will be inverted (white on black text)
 //If INVERT_MODE is INVERT_IN_AM, then the color will only be inverted from 12:00AM to 11:59AM
 //Otherwise the color will not be inverted.
 #define INVERT_NEVER 0
 #define INVERT_ON_AM 1
 #define INVERT_ALWAYS 2
+
+int invert_mode;
+bool bt_notification;
+
+static enum 
+{
+	CONFIG_KEY_INVERTMODE = 20,
+	CONFIG_KEY_BTNOTIFICATION = 21
+};

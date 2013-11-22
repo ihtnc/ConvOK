@@ -13,6 +13,7 @@ typedef struct {
 
 void btmonitor_subscribe(BTMonitorCallbacks callback);
 void btmonitor_init(bool enable_vibrate);
-void btmonitor_deinit();
+void btmonitor_deinit(void);
+void btmonitor_unsubscribe(void);
 
 #endif

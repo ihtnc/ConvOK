@@ -19,8 +19,6 @@
 Window *window;
 InverterLayer *inverter;
 
-int invert_mode;
-
 typedef struct
 {
 	GBitmap *image;
@@ -114,24 +112,3 @@ const int IMAGE_RESOURCE_BOT_IDS[4] =
  	 RESOURCE_ID_IMAGE_BOT_00, RESOURCE_ID_IMAGE_BOT_15,
  	 RESOURCE_ID_IMAGE_BOT_30, RESOURCE_ID_IMAGE_BOT_45
 };
-
-static void handle_init();
-static void handle_deinit() ;
-
-static void inverter_init();
-static void determine_invert_status(struct tm *tick_time);
-static void inverter_deinit();
-
-static void main_animation_in_init(int slot_number, int state);
-static void main_animation_in_stopped(Animation *animation, bool finished, void *data);
-static void splash_animation_in_init(int slot_number, int state);
-static void splash_animation_in_stopped(Animation *animation, bool finished, void *data);
-
-static void slot_animation_out_init(int slot_number);
-static void slot_animate(int slot_number);
-static void slot_animation_out_stopped(Animation *animation, bool finished, void *data);
-static void slot_deinit(int slot_number);
-
-static int resource_id_get_from_state(int slot_number);
-static int state_determine_value(int slot_number, struct tm *time);
-
