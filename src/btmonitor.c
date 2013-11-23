@@ -1,7 +1,7 @@
 #include "btmonitor.h"
+#include "thincfg.h"
 #include "options.h"
 
-static bool needs_vibrate;
 static bool is_connected;
 static uint8_t vibe_freq_count = 13;
 static uint8_t vibe_freq[] = {1, 1, 1, 1, 5, 5, 5, 5, 5, 30, 30, 30, 60};
@@ -24,12 +24,8 @@ const VibePattern vibes_connect_pattern =
 static void app_timer_callback(void *context)
 {
 	vibe_index++;
+	bool needs_vibrate = get_bt_notification_value();
 	is_connected = bluetooth_connection_service_peek();
-	
-	#ifdef ENABLE_LOGGING
-	if(is_connected) APP_LOG(APP_LOG_LEVEL_DEBUG, "app_timer_callback: is_connected=true");
-	else APP_LOG(APP_LOG_LEVEL_DEBUG, "app_timer_callback: is_connected=false");
-	#endif
 	
 	if(is_connected == false)
 	{
@@ -56,10 +52,6 @@ static void app_timer_callback(void *context)
 		
 		if(btcallbacks.ping)
 		{
-			#ifdef ENABLE_LOGGING
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "bluetooth_connection_callback: run ping callback");
-			#endif
-			
 			btcallbacks.ping();
 		}
 	}
@@ -67,6 +59,7 @@ static void app_timer_callback(void *context)
 	
 static void bluetooth_connection_callback(bool connected)
 {
+	bool needs_vibrate = get_bt_notification_value();
 	is_connected = connected;
 	vibe_index = 0;
 	
@@ -78,11 +71,7 @@ static void bluetooth_connection_callback(bool connected)
 	if(connected == false)
 	{
 		if(needs_vibrate == true) 
-		{
-			#ifdef ENABLE_LOGGING
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "bluetooth_connection_callback: disconnect vibrate pattern");
-			#endif
-			
+		{		
 			vibes_enqueue_custom_pattern(vibes_disconnect_pattern);
 		}
 		
@@ -102,21 +91,11 @@ static void bluetooth_connection_callback(bool connected)
 	else
 	{
 		if(needs_vibrate == true) 
-		{
-			#ifdef ENABLE_LOGGING
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "bluetooth_connection_callback: connect vibrate pattern");
-			#endif
-				
+		{	
 			vibes_enqueue_custom_pattern(vibes_connect_pattern);
 		}
 	}
 	
-	if(needs_vibrate == false)
-	{
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "bluetooth_connection_callback: will not vibrate");
-		#endif
-	}
 	
 	if(btcallbacks.status_changed) 
 	{
@@ -130,29 +109,17 @@ static void bluetooth_connection_callback(bool connected)
 
 void btmonitor_unsubscribe()
 {
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "btmonitor_unsubscribe: done");
-	#endif
+	//
 }
 
 void btmonitor_subscribe(BTMonitorCallbacks callbacks)
 {
 	btcallbacks = callbacks;
-	
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "btmonitor_subscribe: done");
-	#endif
 }
 
-void btmonitor_init(bool enable_vibrate) 
-{
-	needs_vibrate = enable_vibrate;
-	
-	#ifdef ENABLE_LOGGING
-	if(needs_vibrate == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "btmonitor_init: enable_vibrate=true");
-	else APP_LOG(APP_LOG_LEVEL_DEBUG, "btmonitor_init: enable_vibrate=false");
-	#endif
-	
+
+void btmonitor_init() 
+{		
 	bluetooth_connection_callback(bluetooth_connection_service_peek());	
 	bluetooth_connection_service_subscribe(bluetooth_connection_callback);
 }
@@ -160,9 +127,5 @@ void btmonitor_init(bool enable_vibrate)
 void btmonitor_deinit() 
 {
 	bluetooth_connection_service_unsubscribe();
-	free(timer);	
-	
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "btmonitor_deinit: done");
-	#endif
+	free(timer);
 }

@@ -46,32 +46,15 @@ static void determine_invert_status(struct tm *tick_time)
 	}
 	
 	layer_set_frame(inverter_layer_get_layer(inverter), GRect(0, 0, SCREEN_WIDTH, (invert ? SCREEN_HEIGHT : 0)));
-	
-	#ifdef ENABLE_LOGGING
-	if(invert == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: inverted");
-	else APP_LOG(APP_LOG_LEVEL_DEBUG, "determine_invert_status: not inverted");
-	#endif
 }
 
 static int resource_id_get_from_state(int slot_number)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
-		#ifdef ENABLE_LOGGING
-		char *error = "resource_id_get_from_state: invalid value; slot_number=XXX";
-		snprintf(error, strlen(error), "resource_id_get_from_state: invalid value; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error);
-		#endif
-
 		return RESOURCE_ID_ERROR;
 	}
-	
-	#ifdef ENABLE_LOGGING
-	char *output = "resource_id_get_from_state: slot_number=XXX; slot_state=XXX";
-	snprintf(output, strlen(output), "resource_id_get_from_state: slot_number=%d; slot_state=%d", slot_number, slots[slot_number].state);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
-		
+			
 	if(slots[slot_number].state != SLOT_STATE_SPLASH && slots[slot_number].state != SLOT_STATE_EMPTY)
 	{
 		if (slot_number == SLOT_TOP) { return IMAGE_RESOURCE_TOP_IDS[slots[slot_number].state]; }
@@ -94,12 +77,6 @@ static int state_determine_value(int slot_number, struct tm *time)
 		
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
-		#ifdef ENABLE_LOGGING
-		char *error = "state_determine_value: invalid value; slot_number=XXX";
-		snprintf(error, strlen(error), "state_determine_value: invalid value; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error);
-		#endif
-
 		return SLOT_STATE_ERROR;
 	}
 	
@@ -146,13 +123,7 @@ static int state_determine_value(int slot_number, struct tm *time)
 		//Normalize the value (should only be 0-3)
 		state_value = state_value % 4; 
 	}
-	
-	#ifdef ENABLE_LOGGING
-	char *output = "state_determine_value: slot_number=XXX; state_value=XXX";
-	snprintf(output, strlen(output), "state_determine_value: slot_number=%d; state_value=%d", slot_number, state_value);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
-	
+
 	return state_value;
 }
 
@@ -169,34 +140,16 @@ static void slot_deinit(int slot_number)
 	
 	gbitmap_destroy(slots[slot_number].image);
 	free(slots[slot_number].image);
-	
-	#ifdef ENABLE_LOGGING
-	char *output = "slot_deinit: slot_number=XXX";
-	snprintf(output, strlen(output), "slot_deinit: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
 }
 
 static void slot_animate(int slot_number)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
-		#ifdef ENABLE_LOGGING
-		char *error1 = "slot_animate: invalid value; slot_number=XXX";
-		snprintf(error1, strlen(error1), "slot_animate: invalid value; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error1);
-		#endif
-
 		return;
 	}
 	
 	animation_schedule((Animation*)slots[slot_number].animation);
-	
-	#ifdef ENABLE_LOGGING
-	char *output = "slot_animate: slot_number=XXX";
-	snprintf(output, strlen(output), "slot_animate: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
 }
 
 static void slot_animation_out_stopped(Animation *animation, bool finished, void *data)
@@ -212,13 +165,7 @@ static void slot_animation_out_stopped(Animation *animation, bool finished, void
 	
 	(void)animation;
 	int slot_number = *(int*)data;
-	
-	#ifdef ENABLE_LOGGING
-	char *output = "slot_animation_out_stopped: slot_number=XXX";
-	snprintf(output, strlen(output), "slot_animation_out_stopped: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
-	
+		
 	slot_deinit(slot_number);
 
 	time_t t = time(NULL);
@@ -233,12 +180,6 @@ static void slot_animation_out_init(int slot_number)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
-		#ifdef ENABLE_LOGGING
-		char *error = "slot_animation_out_init: invalid value; slot_number=XXX";
-		snprintf(error, strlen(error), "slot_animation_out_init: invalid value; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error);
-		#endif
-
 		return;
 	}
 
@@ -275,12 +216,6 @@ static void slot_animation_out_init(int slot_number)
 						   (AnimationHandlers)
 						   { .stopped = (AnimationStoppedHandler)slot_animation_out_stopped }, 
 						   &slots[slot_number].slot_number);
-
-	#ifdef ENABLE_LOGGING
-	char *output = "slot_animation_out_init: slot_number=XXX";
-	snprintf(output, strlen(output), "slot_animation_out_init: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
 }
 
 static void main_animation_in_stopped(Animation *animation, bool finished, void *data)
@@ -297,12 +232,6 @@ static void main_animation_in_stopped(Animation *animation, bool finished, void 
 	(void)animation;
 	int slot_number = *(int*)data;
 	
-	#ifdef ENABLE_LOGGING
-	char *output = "main_animation_in_stopped: slot_number=XXX";
-	snprintf(output, strlen(output), "main_animation_in_stopped: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
-
 	slot_animation_out_init(slot_number);
 }
 
@@ -310,12 +239,6 @@ static void main_animation_in_init(int slot_number, int state)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
-		#ifdef ENABLE_LOGGING
-		char *error1 = "main_animation_in_init: invalid value: slot_number=XXX";
-		snprintf(error1, strlen(error1), "main_animation_in_init: invalid value; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error1);
-		#endif
-
 		return;
 	}
 	
@@ -356,12 +279,6 @@ static void main_animation_in_init(int slot_number, int state)
 						   (AnimationHandlers)
 						   { .stopped = (AnimationStoppedHandler)main_animation_in_stopped }, 
 						   &slots[slot_number].slot_number);
-
-	#ifdef ENABLE_LOGGING
-	char *output = "main_animation_in_init: slot_number=XXX";
-	snprintf(output, strlen(output), "main_animation_in_init: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
 }
 
 static void splash_animation_in_stopped(Animation *animation, bool finished, void *data)
@@ -377,12 +294,6 @@ static void splash_animation_in_stopped(Animation *animation, bool finished, voi
 	
 	(void)animation;
 	int slot_number = *(int*)data;
-	
-	#ifdef ENABLE_LOGGING
-	char *output = "splash_animation_in_stopped: slot_number=XXX";
-	snprintf(output, strlen(output), "splash_animation_in_stopped: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
 
 	slot_animation_out_init(slot_number);
 	slot_animate(slot_number);
@@ -392,12 +303,6 @@ static void splash_animation_in_init(int slot_number, int state)
 {
 	if(slot_number >= SLOTS_COUNT || slot_number < 0)
 	{
-		#ifdef ENABLE_LOGGING
-		char *error = "splash_animation_in_init: invalid value; slot_number=XXX";
-		snprintf(error, strlen(error), "splash_animation_in_init: invalid value; slot_number=%d", slot_number);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, error);
-		#endif
-
 		return;
 	}
 
@@ -438,12 +343,6 @@ static void splash_animation_in_init(int slot_number, int state)
 						   (AnimationHandlers)
 						   { .stopped = (AnimationStoppedHandler)splash_animation_in_stopped }, 
 						   &slots[slot_number].slot_number);
-
-	#ifdef ENABLE_LOGGING
-	char *output = "splash_animation_in_init: slot_number=XXX";
-	snprintf(output, strlen(output), "splash_animation_in_init: slot_number=%d", slot_number);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
 }
 
 static void inverter_deinit()
@@ -451,33 +350,16 @@ static void inverter_deinit()
 	layer_remove_from_parent(inverter_layer_get_layer(inverter));
 	inverter_layer_destroy(inverter);
 	free(inverter);
-		
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_deinit: done");
-	#endif
 }
 
-static void inverter_init(int mode)
+static void inverter_init()
 {
 	inverter = inverter_layer_create(GRect(0, 0, SCREEN_WIDTH, 0));
 	layer_add_child(window_get_root_layer(window), inverter_layer_get_layer(inverter));
-	
-	#ifdef ENABLE_LOGGING
-	if(mode == INVERT_ON_AM) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ON_AM");
-	else if(mode == INVERT_ALWAYS) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_ALWAYS");
-	else if(mode == INVERT_NEVER) APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: INVERT_NEVER");
-	else APP_LOG(APP_LOG_LEVEL_DEBUG, "inverter_init: invalid invert_mode; default=INVERT_NEVER");
-	#endif
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) 
 {
-	#ifdef ENABLE_LOGGING
-	char *output = "handle_tick: MM/dd/yyyy hh:mm:ss";
-	strftime(output, strlen(output), "handle_tick: %D %T", tick_time);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, output);
-	#endif
-
 	if(slots[SLOT_TOP].state == SLOT_STATE_SPLASH
 		|| slots[SLOT_MID].state == SLOT_STATE_SPLASH
 		|| slots[SLOT_BOT].state == SLOT_STATE_SPLASH)
@@ -495,16 +377,6 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	{
 		slots[SLOT_TOP].state = top_state;
 		slot_animate(SLOT_TOP);
-		
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: animating top");
-		#endif
-	}
-	else
-	{
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: not animating top");
-		#endif
 	}
 
 	int mid_state = state_determine_value(SLOT_MID, tick_time);
@@ -512,16 +384,6 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	{
 		slots[SLOT_MID].state = mid_state;
 		slot_animate(SLOT_MID);
-
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: animating mid");
-		#endif
-	}
-	else
-	{
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: not animating mid");
-		#endif
 	}
 
 	int bot_state = state_determine_value(SLOT_BOT, tick_time);
@@ -529,26 +391,12 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	{
 		slots[SLOT_BOT].state = bot_state;
 		slot_animate(SLOT_BOT);
-
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: animating bot");
-		#endif
-	}
-	else
-	{
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_tick: not animating bot");
-		#endif
 	}
 }
 
 static void handle_deinit() 
 {
 	window_destroy(window);
-	
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_deinit: done");
-	#endif
 }
 
 static void window_unload(Window *window) 
@@ -563,24 +411,14 @@ static void window_unload(Window *window)
 	slot_deinit(SLOT_TOP);
 	slot_deinit(SLOT_MID);
 	slot_deinit(SLOT_BOT);
-	
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, " window_unload: done");
-	#endif
 }
 
 static void window_load(Window *window) 
 {
 	#ifndef DEBUG
 		tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
-		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe: MINUTE_UNIT");
-		#endif
 	#else
 		tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
-		#ifdef ENABLE_LOGGING
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "tick_timer_service_subscribe: SECOND_UNIT");
-		#endif
 	#endif
 	
 	thincfg_init();
@@ -598,10 +436,6 @@ static void window_load(Window *window)
 	slot_animate(SLOT_TOP);
 	slot_animate(SLOT_MID);
 	slot_animate(SLOT_BOT);
-
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "window_load: done");
-	#endif
 }
 
 static void handle_init()
@@ -615,18 +449,10 @@ static void handle_init()
 							   });
 	window_set_background_color(window, GColorBlack);
 	window_stack_push(window, true);
-
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "handle_init: done");
-	#endif
 }
 
 int main(void) 
 {
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "main: start");
-	#endif
-		
 	handle_init();
 	app_event_loop();
 	handle_deinit();

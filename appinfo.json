@@ -3,7 +3,8 @@
     "uuid": "0adb03ec-913b-4229-9d0b-edc4fd265793",
     "appKeys": {
 		"InvertMode": 0,
-		"BTNotification": 1
+		"BTNotification": 1,
+		"Action": 2
 	},
     "longName": "Pebble-OrangeKid",
     "versionCode": 1,

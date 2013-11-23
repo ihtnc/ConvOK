@@ -1,32 +1,45 @@
 #include "thincfg.h"
+#include "btmonitor.h"
 #include "options.h"
+
+static int invert_mode;
+static bool bt_notification;
+
+int get_invert_mode_value(void)
+{
+	return invert_mode;
+}
+
+bool get_bt_notification_value(void)
+{
+	return bt_notification;
+}
 
 static void read_config() 
 {
 	if (persist_exists(CONFIG_KEY_INVERTMODE)) 
 	{
-		int mode = persist_read_int(CONFIG_KEY_INVERTMODE);
-		set_invert_mode_value(mode);		
+		invert_mode = persist_read_int(CONFIG_KEY_INVERTMODE);
 
 		#ifdef ENABLE_LOGGING
 		char *output = "read_config: invert_mode=XXX";
-		snprintf(output, strlen(output), "read_config: invert_mode=%d", mode);
+		snprintf(output, strlen(output), "read_config: invert_mode=%d", invert_mode);
 		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 		#endif
 	}
 	else
 	{
-		set_invert_mode_value(1); //default value
+		invert_mode = 0; //default value
 
 		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: invert_mode not configured. default=1");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: invert_mode not configured. default=0");
 		#endif
 	}
 	
 	if (persist_exists(CONFIG_KEY_BTNOTIFICATION)) 
 	{
-		bool bt = (persist_read_int(CONFIG_KEY_BTNOTIFICATION == 1));
-		set_bt_notification_value(bt);
+		bool bt = persist_read_bool(CONFIG_KEY_BTNOTIFICATION);
+		bt_notification = bt;
 
 		#ifdef ENABLE_LOGGING
 		if(bt == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: bt_notification=true");
@@ -35,19 +48,12 @@ static void read_config()
 	} 
 	else
 	{
-		set_bt_notification_value(true); //default value
-		
+		bt_notification = false; //default value
+
 		#ifdef ENABLE_LOGGING
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: bt_notification not configured. default=true");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: bt_notification not configured. default=false");
 		#endif
 	}
-}
-
-static void apply_config() 
-{
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "apply_config: done");
-	#endif
 }
 
 static void in_dropped_handler(AppMessageResult reason, void *context) 
@@ -63,12 +69,11 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 	if(mode) 
 	{
 		persist_write_int(CONFIG_KEY_INVERTMODE, mode->value->int32);
-		int inv_mode = mode->value->int32;
-		set_invert_mode_value(inv_mode);
-
+		invert_mode = (int)mode->value->int32;
+	
 		#ifdef ENABLE_LOGGING
 		char *output = "in_received_handler: invert_mode=XXX";
-		snprintf(output, strlen(output), "in_received_handler: invert_mode=%d", inv_mode);
+		snprintf(output, strlen(output), "in_received_handler: invert_mode=%d", (int)mode->value->int32);
 		APP_LOG(APP_LOG_LEVEL_DEBUG, output);
 		#endif
 	}
@@ -77,16 +82,23 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 	if(bt) 
 	{
 		persist_write_int(CONFIG_KEY_BTNOTIFICATION, bt->value->int32);
-		bool bt_ntf = (bt->value->int32 == 1);
-		set_bt_notification_value(bt_ntf);
-		
+		bt_notification = (bt->value->int32 == 1);
+
 		#ifdef ENABLE_LOGGING
-		if(bt_ntf == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: bt_notification=true");
+		if(bt_notification == true) APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: bt_notification=true");
 		else APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: bt_notification=false");
 		#endif
 	}
+	else
+	{
+		//since thinCFG won't pass fields that are not selected, we set the bt_notification to false if its key is not returned
+		persist_write_bool(CONFIG_KEY_BTNOTIFICATION, false);
+		bt_notification = false;
 
-	if(mode || bt) apply_config();
+		#ifdef ENABLE_LOGGING
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: bt_notification=false");
+		#endif
+	}
 }
 
 static void app_message_init(void) 
@@ -100,17 +112,9 @@ void thincfg_init()
 {
     app_message_init();
 	read_config();
-
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "thincfg_init: done");
-	#endif
 }
 
 void thincfg_deinit()
 {
 	app_message_deregister_callbacks();
-	
-	#ifdef ENABLE_LOGGING
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "thincfg_deinit: done");
-	#endif
 }
