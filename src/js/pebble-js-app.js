@@ -57,7 +57,7 @@ Pebble.addEventListener("showConfiguration", function(e) {
 		"]";
 	var url = "http://ihtnc-pebble-config.azurewebsites.net/?";
 	var title = "&title=OrangeKid+Configuration";
-	var fields = "&fields=" + json;
+	var fields = "&fields=" + encodeURIComponent(json);
 	
 	if(enable_logging) console.log("Pebble.showConfiguration: url=" + url + title + fields);
 	Pebble.openURL(url + title + fields);
@@ -68,9 +68,12 @@ Pebble.addEventListener("webviewclosed", function(e) {
 		console.log("Pebble.webviewclosed: no response received");
 		return;
 	}
+	else {
+		console.log("Pebble.webviewclosed: response=" + e.response);
+	}
 
 	var configuration = JSON.parse(e.response);
-	if(configuration["action"] = "cancel") {
+	if(configuration["action"] == "cancel") {
 		if(enable_logging) console.log("Pebble.webviewclosed: action=cancel");
 		return;
 	}
