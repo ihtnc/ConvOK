@@ -11,7 +11,6 @@ typedef struct {
         BTPingHandler ping;
 } BTMonitorCallbacks;
 
-void set_btmonitor_vibrate(bool value);
 void btmonitor_subscribe(BTMonitorCallbacks callback);
 void btmonitor_init();
 void btmonitor_deinit(void);
