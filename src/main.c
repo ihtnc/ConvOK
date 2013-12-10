@@ -394,6 +394,19 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed)
 	}
 }
 
+static void field_changed(const uint32_t key, const void *old_value, const void *new_value)
+{
+	if(key == CONFIG_KEY_INVERTMODE)
+	{
+		struct tm *local;
+		time_t temp;
+		time(&temp);
+		local = localtime(&temp);
+		determine_invert_status(local);
+		free(local);
+	}
+}
+
 static void handle_deinit() 
 {
 	window_destroy(window);
@@ -401,6 +414,7 @@ static void handle_deinit()
 
 static void window_unload(Window *window) 
 {
+	thincfg_unsubscribe();
 	thincfg_deinit();
 	btmonitor_deinit();
 	inverter_deinit();
@@ -422,6 +436,8 @@ static void window_load(Window *window)
 	#endif
 	
 	thincfg_init();
+	thincfg_subscribe((ThinCFGCallbacks) { .field_changed = field_changed, });
+
 	btmonitor_init(get_bt_notification_value());
 	inverter_init(get_invert_mode_value());
 

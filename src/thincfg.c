@@ -5,15 +5,13 @@
 static int invert_mode;
 static bool bt_notification;
 
-int get_invert_mode_value(void)
-{
-	return invert_mode;
-}
+static int old_invert_mode;
+static bool old_bt_notification;
 
-bool get_bt_notification_value(void)
-{
-	return bt_notification;
-}
+static ThinCFGCallbacks cfgcallbacks;
+
+int get_invert_mode_value(void) { return invert_mode; }
+bool get_bt_notification_value(void) { return bt_notification; }
 
 static void read_config() 
 {
@@ -54,6 +52,9 @@ static void read_config()
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: bt_notification not configured. default=false");
 		#endif
 	}
+
+	old_bt_notification = bt_notification;
+	old_invert_mode = invert_mode;
 }
 
 static void in_dropped_handler(AppMessageResult reason, void *context) 
@@ -78,6 +79,12 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		#endif
 	}
 
+	if(old_invert_mode != invert_mode && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_INVERTMODE, (void *)&old_invert_mode, (void *)&invert_mode);
+	}
+	old_invert_mode = invert_mode;
+
 	Tuple *bt = dict_find(received, CONFIG_KEY_BTNOTIFICATION);
 	if(bt) 
 	{
@@ -99,13 +106,29 @@ static void in_received_handler(DictionaryIterator *received, void *context)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "in_received_handler: bt_notification=false");
 		#endif
 	}
+
+	if(old_bt_notification != bt_notification && cfgcallbacks.field_changed)
+	{
+		cfgcallbacks.field_changed(CONFIG_KEY_BTNOTIFICATION, (void *)&old_bt_notification, (void *)&bt_notification);
+	}
+	old_bt_notification = bt_notification;
+}
+
+void thincfg_unsubscribe()
+{
+	//
+}
+
+void thincfg_subscribe(ThinCFGCallbacks callbacks)
+{
+	cfgcallbacks = callbacks;
 }
 
 static void app_message_init(void) 
 {
 	app_message_register_inbox_received(in_received_handler);
 	app_message_register_inbox_dropped(in_dropped_handler);
-	app_message_open(64, 64);
+	app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
 }
 
 void thincfg_init() 
