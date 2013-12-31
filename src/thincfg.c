@@ -46,7 +46,7 @@ static void read_config()
 	} 
 	else
 	{
-		bt_notification = false; //default value
+		bt_notification = true; //default value
 
 		#ifdef ENABLE_LOGGING
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "read_config: bt_notification not configured. default=false");
@@ -59,6 +59,8 @@ static void read_config()
 
 static void in_dropped_handler(AppMessageResult reason, void *context) 
 {
+	vibes_long_pulse();
+
 	#ifdef ENABLE_LOGGING
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "in_dropped_handler: done");
 	#endif
