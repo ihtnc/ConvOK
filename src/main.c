@@ -30,7 +30,7 @@ static void main_animation_in_init(int slot_number, int state);
 static void determine_invert_status(struct tm *tick_time)
 {
 	bool invert;
-	bool mode = get_invert_mode_value();
+	int mode = get_invert_mode_value();
 
 	if(mode == INVERT_ON_AM)
 	{
