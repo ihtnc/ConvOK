@@ -73,26 +73,26 @@ Pebble.addEventListener("webviewclosed", function(e) {
 	}
 
 	var configuration = JSON.parse(e.response);
-	if(configuration["action"] == "cancel") {
+	if(configuration.action == "cancel") {
 		if(enable_logging) console.log("Pebble.webviewclosed: action=cancel");
 		return;
 	}
 	
 	if(enable_logging) console.log("Pebble.webviewclosed: action=save");
 	
-	mode = configuration["InvertMode"];
+	mode = configuration.InvertMode;
 	localStorage.setItem("InvertMode", mode);
 	if(enable_logging) console.log("Pebble.webviewclosed: mode=" + mode);
 	
-	if(configuration["BTNotification"] == null) bt = 0;
-	else bt = configuration["BTNotification"];
+	if(configuration.BTNotification === null) bt = 0;
+	else bt = configuration.BTNotification;
 
 	localStorage.setItem("BTNotification", bt);
 	if(enable_logging) console.log("Pebble.webviewclosed: bt=" + bt);	
 
 	//since thinCFG returne everything as string, convert the values we retrieved to int before sending to the pebble watchface
-	configuration["InvertMode"] = parseInt(mode);
-	configuration["BTNotification"] = parseInt(bt);
+	configuration.InvertMode = parseInt(mode);
+	configuration.BTNotification = parseInt(bt);
 	Pebble.sendAppMessage(configuration);
 	
 	if(enable_logging) console.log("Pebble.sendAppMessage: done");
